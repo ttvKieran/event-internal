@@ -1,0 +1,259 @@
+asyncapi: 2.6.0
+info:
+  title: Resource Service - Async API
+  version: 1.0.0
+servers:
+  productionBroker:
+    url: broker.events.internal.company.vn:9092
+    protocol: kafka
+    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
+      tương đương).
+  stagingBroker:
+    url: broker.events.staging.company.vn:9092
+    protocol: kafka
+channels:
+  Resource:
+    description: 'Domain Events của Aggregate `Resource`. Publisher — Resource Service.
+
+      Subscribers điển hình: Registration (`CapacityClaimed`→`ConfirmFreeRegistration`,
+
+      `TemporaryCapacityHeld`→ khởi phát Payment Saga), Analytics.
+
+      '
+    publish:
+      operationId: emitResourceEvent
+      summary: Resource Service phát sự kiện vòng đời tài nguyên và thay đổi dung
+        lượng.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/ResourceCreatedEvent'
+          - $ref: '#/components/messages/ResourceConfiguredEvent'
+          - $ref: '#/components/messages/CapacityClaimedEvent'
+          - $ref: '#/components/messages/TemporaryCapacityHeldEvent'
+          - $ref: '#/components/messages/CapacityReleasedEvent'
+          - $ref: '#/components/messages/CapacityClaimRejectedBecauseFullEvent'
+  resource-commands:
+    description: 'Point-to-Point — chỉ **Resource Service** subscribe. `ReleaseCapacityCommand`
+      được
+
+      publish bởi Registration Context khi phản ứng với `PaidRegistrationRolledBack`
+
+      hoặc `RegistrationCancelled` (Choreography, không qua Policy đặt tên tường minh).
+
+      '
+    subscribe:
+      operationId: onResourceCommand
+      summary: Resource Service nhận và xử lý các Command giải phóng dung lượng/slot.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/ReleaseCapacityCommand'
+components:
+  schemas:
+    ResourceCreatedEventPayload:
+      type: object
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - MEETING_ROOM
+            - EVENT_HALL
+            - HOT_DESK
+            - CARGO_TRUCK
+            - LAPTOP
+            - PROJECTOR
+        createdAt:
+          type: string
+          format: date-time
+    ResourceConfiguredEventPayload:
+      type: object
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - MEETING_ROOM
+            - EVENT_HALL
+            - HOT_DESK
+            - CARGO_TRUCK
+            - LAPTOP
+            - PROJECTOR
+        capacity:
+          type: number
+          format: double
+          example: 50.0
+        location:
+          type: string
+        configuredAt:
+          type: string
+          format: date-time
+    CapacityClaimedEventPayload:
+      type: object
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        remainingCapacity:
+          type: number
+          format: double
+        claimedAt:
+          type: string
+          format: date-time
+    TemporaryCapacityHeldEventPayload:
+      type: object
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          format: double
+        holdExpiresAt:
+          type: string
+          format: date-time
+    CapacityReleasedEventPayload:
+      type: object
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        releasedAt:
+          type: string
+          format: date-time
+    CapacityClaimRejectedBecauseFullEventPayload:
+      type: object
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          example: NO_REMAINING_CAPACITY
+        rejectedAt:
+          type: string
+          format: date-time
+    ReleaseCapacityCommandPayload:
+      type: object
+      required:
+        - resourceId
+        - registrationId
+        - reason
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          default: 1
+        reason:
+          type: string
+          enum:
+            - PAYMENT_ROLLED_BACK
+            - REGISTRATION_CANCELLED
+  messages:
+    ResourceCreatedEvent:
+      name: ResourceCreatedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/ResourceCreatedEventPayload'
+    ResourceConfiguredEvent:
+      name: ResourceConfiguredEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/ResourceConfiguredEventPayload'
+    CapacityClaimedEvent:
+      name: CapacityClaimedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/CapacityClaimedEventPayload'
+    TemporaryCapacityHeldEvent:
+      name: TemporaryCapacityHeldEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/TemporaryCapacityHeldEventPayload'
+    CapacityReleasedEvent:
+      name: CapacityReleasedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/CapacityReleasedEventPayload'
+    CapacityClaimRejectedBecauseFullEvent:
+      name: CapacityClaimRejectedBecauseFullEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/CapacityClaimRejectedBecauseFullEventPayload'
+    ReleaseCapacityCommand:
+      name: ReleaseCapacityCommand
+      title: ReleaseCapacityCommand
+      summary: Yêu cầu Resource Service giải phóng dung lượng đã giữ.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/ReleaseCapacityCommandPayload'
+  messageTraits:
+    eventTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+          - timestamp
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          correlationId:
+            type: string
+            format: uuid
+            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
+          timestamp:
+            type: string
+            format: date-time
+    commandTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+        properties:
+          messageId:
+            type: string
+            format: uuid
+            description: ID duy nhất của message (idempotency key).
+          correlationId:
+            type: string
+            format: uuid
+            description: Nối các bước trong cùng một Saga/luồng nghiệp vụ.
+          replyTo:
+            type: string
+            description: Return address (topic/queue) để service xử lý gửi phản hồi
+              — phục vụ Async Request/Response.
+          timestamp:
+            type: string
+            format: date-time

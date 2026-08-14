@@ -1,0 +1,292 @@
+openapi: 3.0.3
+info:
+  title: Iam Service - REST API
+  version: 1.0.0
+servers:
+  - url: https://api.events.internal.company.vn/v1
+    description: Production (qua API Gateway, mục 3.1 Context Map)
+  - url: https://api.events.staging.company.vn/v1
+    description: Staging
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Identity & Access
+      summary: Đăng nhập bằng tài khoản công ty (Login)
+      description:
+        "Command: **Login** → Aggregate `EmployeeAccount` → Event `EmployeeLoggedIn`.
+
+        Đây là OHS của IAM: mọi Bounded Context khác Conformist trực tiếp với JWT
+        trả về
+
+        (không wrap lại). API Gateway sẽ verify JWT và forward `X-User-Id`, `X-User-Role`.
+
+        "
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description:
+            Đăng nhập thành công, trả về JWT (Published Language) bọc trong
+            ApiResponse DTO.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginApiResponse"
+        "400":
+          description: Dữ liệu đầu vào không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: BAD_REQUEST
+                message: Dữ liệu đầu vào không hợp lệ (thiếu employeeCode hoặc password).
+                data: null
+                timestamp: "2026-08-13T08:00:00.000Z"
+                path: /v1/auth/login
+        "401":
+          description: Sai tài khoản/mật khẩu.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                code: INVALID_CREDENTIALS
+                message: Mã nhân viên hoặc mật khẩu không chính xác.
+                data: null
+                timestamp: "2026-08-13T08:00:00.000Z"
+                path: /v1/auth/login
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - employeeCode
+        - password
+      properties:
+        employeeCode:
+          type: string
+          example: EMP00123
+        password:
+          type: string
+          format: password
+    LoginApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Đăng nhập thành công.
+        data:
+          $ref: "#/components/schemas/LoginData"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    LoginData:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - tokenType
+        - expiresIn
+        - employee
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token dùng để xác thực các request tiếp theo.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: Refresh Token dùng để lấy accessToken mới khi hết hạn.
+          example: def502008b417c8a0056...
+        tokenType:
+          type: string
+          default: Bearer
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Thời gian sống của accessToken tính bằng giây.
+          example: 3600
+        employee:
+          type: object
+          required:
+            - employeeId
+            - employeeCode
+            - fullName
+            - email
+            - role
+          properties:
+            employeeId:
+              type: string
+              format: uuid
+              example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+            employeeCode:
+              type: string
+              example: EMP00123
+            fullName:
+              type: string
+              example: Nguyễn Văn An
+            email:
+              type: string
+              format: email
+              example: an.nguyen@company.vn
+            department:
+              type: string
+              example: Trung tâm Phân tích Dữ liệu
+            role:
+              type: string
+              enum:
+                - ORGANIZER
+                - EMPLOYEE
+              example: ORGANIZER
+    ErrorResponse:
+      type: object
+      description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).
+      required:
+        - success
+        - code
+        - message
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: INVALID_INPUT
+        message:
+          type: string
+          example: Dữ liệu yêu cầu không hợp lệ.
+        data:
+          type: object
+          nullable: true
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+        path:
+          type: string
+          example: /v1/auth/login
+  responses:
+    BadRequest:
+      description: Dữ liệu đầu vào không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: BAD_REQUEST
+            message: Dữ liệu đầu vào không hợp lệ.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Unauthorized:
+      description: Thiếu hoặc JWT không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: UNAUTHORIZED
+            message: Xác thực không thành công hoặc JWT hết hạn.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Forbidden:
+      description: Role JWT không đủ quyền (vd. cần ORGANIZER).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: FORBIDDEN
+            message: Tài khoản không đủ quyền truy cập tài nguyên này.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    NotFound:
+      description: Không tìm thấy tài nguyên.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: NOT_FOUND
+            message: Tài nguyên được yêu cầu không tồn tại.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Conflict:
+      description: Xung đột trạng thái (vd. đã PUBLISHED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: CONFLICT
+            message: Xung đột trạng thái tài nguyên.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+  parameters:
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid

@@ -1,0 +1,462 @@
+openapi: 3.0.3
+info:
+  title: Event Service - REST API
+  version: 1.0.0
+servers:
+  - url: https://api.events.internal.company.vn/v1
+    description: Production (qua API Gateway, mục 3.1 Context Map)
+  - url: https://api.events.staging.company.vn/v1
+    description: Staging
+paths:
+  /events:
+    post:
+      tags:
+        - Event Planning
+      summary: Tạo sự kiện (CreateEvent)
+      operationId: createEvent
+      x-required-role: ORGANIZER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "201":
+          description: Event đã tạo (trạng thái DRAFT).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventApiResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags:
+        - Event Planning
+      summary: Lịch sự kiện / Open Events Catalog
+      operationId: listEvents
+      parameters:
+        - name: status
+          in: query
+          description: Lọc theo trạng thái, vd. status=PUBLISHED cho Open Events Catalog.
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - CONFIGURED
+              - PUBLISHED
+              - CANCELLED
+              - STARTED
+              - ENDED
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Danh sách Event bọc trong ApiResponse DTO.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListApiResponse"
+  /events/{eventId}:
+    get:
+      tags:
+        - Event Planning
+      summary: Event Detail Page
+      operationId: getEvent
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Chi tiết Event bọc trong ApiResponse DTO.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventApiResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /events/{eventId}/details:
+    put:
+      tags:
+        - Event Planning
+      summary: Cấu hình chi tiết sự kiện (ConfigureEventDetails)
+      description:
+        ticketType, resourceId… Đọc `Resource Catalog` (Read Model) để
+        chọn phòng — không phải ghi chéo service nên vẫn đồng bộ.
+      operationId: configureEventDetails
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigureEventDetailsRequest"
+      responses:
+        "200":
+          description: Event đã cập nhật xong cấu hình.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventApiResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /events/{eventId}/publish:
+    post:
+      tags:
+        - Event Planning
+      summary: Công bố sự kiện (PublishEvent)
+      description:
+        "Event `EventPublished` phát ra qua Message Broker; Registration
+        Context lắng nghe
+
+        và tự lên lịch mở đăng ký lúc 20h (Policy nội bộ), Attendance/Notification
+        cũng
+
+        Conformist theo. Vì trạng thái PUBLISHED chỉ thuộc về Event Aggregate nên
+        vẫn trả
+
+        kết quả đồng bộ ngay.
+
+        "
+      operationId: publishEvent
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Event đã PUBLISHED.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventApiResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /events/{eventId}/cancel:
+    post:
+      tags:
+        - Event Planning
+      summary: Hủy sự kiện (CancelEvent)
+      operationId: cancelEvent
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Event đã CANCELLED (thông báo hủy tới người đăng ký chạy async).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    CreateEventRequest:
+      type: object
+      required:
+        - title
+        - startTime
+        - endTime
+        - location
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+    EventApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Thao tác sự kiện thành công.
+        data:
+          $ref: "#/components/schemas/Event"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    Event:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+        ticketType:
+          type: string
+          enum:
+            - FREE
+            - PAID
+        maxParticipants:
+          type: integer
+        price:
+          type: number
+          nullable: true
+        allocatedResources:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventResourceAllocation"
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - CONFIGURED
+            - PUBLISHED
+            - CANCELLED
+            - STARTED
+            - ENDED
+        registrationOpenAt:
+          type: string
+          format: date-time
+          nullable: true
+        registrationCloseAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    EventResourceAllocation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        note:
+          type: string
+        resourceId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          format: double
+    EventListApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Lấy danh sách sự kiện thành công.
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    ConfigureEventDetailsRequest:
+      type: object
+      required:
+        - ticketType
+        - allocatedResources
+        - maxParticipants
+      properties:
+        ticketType:
+          type: string
+          enum:
+            - FREE
+            - PAID
+        allocatedResources:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventResourceAllocation"
+        maxParticipants:
+          type: integer
+        price:
+          type: number
+        registrationOpenAt:
+          type: string
+          format: date-time
+        registrationCloseAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).
+      required:
+        - success
+        - code
+        - message
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: INVALID_INPUT
+        message:
+          type: string
+          example: Dữ liệu yêu cầu không hợp lệ.
+        data:
+          type: object
+          nullable: true
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+        path:
+          type: string
+          example: /v1/auth/login
+  responses:
+    BadRequest:
+      description: Dữ liệu đầu vào không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: BAD_REQUEST
+            message: Dữ liệu đầu vào không hợp lệ.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Unauthorized:
+      description: Thiếu hoặc JWT không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: UNAUTHORIZED
+            message: Xác thực không thành công hoặc JWT hết hạn.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Forbidden:
+      description: Role JWT không đủ quyền (vd. cần ORGANIZER).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: FORBIDDEN
+            message: Tài khoản không đủ quyền truy cập tài nguyên này.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    NotFound:
+      description: Không tìm thấy tài nguyên.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: NOT_FOUND
+            message: Tài nguyên được yêu cầu không tồn tại.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Conflict:
+      description: Xung đột trạng thái (vd. đã PUBLISHED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: CONFLICT
+            message: Xung đột trạng thái tài nguyên.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+  parameters:
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid

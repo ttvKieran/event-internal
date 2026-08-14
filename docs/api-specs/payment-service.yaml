@@ -1,0 +1,388 @@
+openapi: 3.0.3
+info:
+  title: Payment Service - REST API
+  version: 1.0.0
+servers:
+  - url: https://api.events.internal.company.vn/v1
+    description: Production (qua API Gateway, mục 3.1 Context Map)
+  - url: https://api.events.staging.company.vn/v1
+    description: Staging
+paths:
+  /payments/{paymentId}:
+    get:
+      tags:
+        - Payment
+      summary: Payment Status Monitor (Read Model)
+      operationId: getPayment
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments/{paymentId}/refund-requests:
+    post:
+      tags:
+        - Payment
+      summary: Yêu cầu hoàn tiền (RequestRefund)
+      description: 'Kết quả hoàn tiền phụ thuộc webhook bất đồng bộ từ VNPay/Momo
+        (ACL, mục 3.5)
+
+        nên publish `RequestRefundCommand` (kênh `payment-commands`) và trả
+
+        `202 Accepted` với trạng thái `REFUND_REQUESTED`.
+
+        '
+      operationId: requestRefund
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestRefundRequest'
+      responses:
+        '202':
+          description: Yêu cầu hoàn tiền đã tiếp nhận.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncOperationApiResponse'
+  /payments/webhooks/vnpay:
+    post:
+      tags:
+        - Payment
+      summary: Webhook callback từ VNPay (ACL boundary)
+      description: 'Payment Service tự dịch payload VNPay (mã merchant, HMAC signature,
+        returnUrl)
+
+        qua `PaymentGatewayAdapter` (Anticorruption Layer, mục 3.5) rồi publish nội
+        bộ
+
+        `ConfirmPaymentCommand` hoặc `FailPaymentCommand` lên kênh `payment-commands`.
+
+        Trả `200` ngay cho VNPay theo yêu cầu chuẩn webhook, không chờ xử lý xong.
+
+        '
+      operationId: handleVnpayWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VnpayWebhookPayload'
+      responses:
+        '200':
+          description: Đã tiếp nhận webhook.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  RspCode:
+                    type: string
+                    example: '00'
+                  Message:
+                    type: string
+                    example: Confirmed
+  /payments/webhooks/momo:
+    post:
+      tags:
+        - Payment
+      summary: Webhook callback từ Momo (ACL boundary)
+      operationId: handleMomoWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MomoWebhookPayload'
+      responses:
+        '200':
+          description: Đã tiếp nhận webhook.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resultCode:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
+                    example: Success
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    PaymentApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Lấy thông tin thanh toán thành công.
+        data:
+          $ref: '#/components/schemas/PaymentRecord'
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-08-13T08:00:00.000Z'
+    PaymentRecord:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        gateway:
+          type: string
+          enum:
+            - VNPAY
+            - MOMO
+        gatewayTransactionId:
+          type: string
+        status:
+          type: string
+          enum:
+            - PAYMENT_REQUESTED
+            - PAYMENT_SUCCEEDED
+            - PAYMENT_FAILED
+            - PAYMENT_TIMED_OUT
+            - PAYMENT_REFUNDED
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+    RequestRefundRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+    AsyncOperationApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: ACCEPTED
+        message:
+          type: string
+          example: Yêu cầu đã được tiếp nhận và xử lý bất đồng bộ.
+        data:
+          $ref: '#/components/schemas/AsyncOperationAccepted'
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-08-13T08:00:00.000Z'
+    AsyncOperationAccepted:
+      type: object
+      description: Response chuẩn cho mọi write đi qua nhiều Bounded Context (HA-first).
+      required:
+        - resourceId
+        - status
+        - submittedAt
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+          description: ID của Registration/Refund vừa khởi tạo.
+        status:
+          type: string
+          example: REGISTRATION_PENDING
+        statusCheckUrl:
+          type: string
+          format: uri
+        submittedAt:
+          type: string
+          format: date-time
+    VnpayWebhookPayload:
+      type: object
+      description: Payload chuẩn VNPay IPN (rút gọn, minh họa ACL đầu vào).
+      properties:
+        vnp_TxnRef:
+          type: string
+        vnp_ResponseCode:
+          type: string
+          example: '00'
+        vnp_Amount:
+          type: string
+        vnp_TransactionNo:
+          type: string
+        vnp_SecureHash:
+          type: string
+    MomoWebhookPayload:
+      type: object
+      properties:
+        orderId:
+          type: string
+        requestId:
+          type: string
+        resultCode:
+          type: integer
+        amount:
+          type: integer
+        signature:
+          type: string
+    ErrorResponse:
+      type: object
+      description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).
+      required:
+        - success
+        - code
+        - message
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: INVALID_INPUT
+        message:
+          type: string
+          example: Dữ liệu yêu cầu không hợp lệ.
+        data:
+          type: object
+          nullable: true
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-08-13T08:00:00.000Z'
+        path:
+          type: string
+          example: /v1/auth/login
+  responses:
+    BadRequest:
+      description: Dữ liệu đầu vào không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            code: BAD_REQUEST
+            message: Dữ liệu đầu vào không hợp lệ.
+            data: null
+            timestamp: '2026-08-13T08:00:00.000Z'
+            path: /v1/api
+    Unauthorized:
+      description: Thiếu hoặc JWT không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            code: UNAUTHORIZED
+            message: Xác thực không thành công hoặc JWT hết hạn.
+            data: null
+            timestamp: '2026-08-13T08:00:00.000Z'
+            path: /v1/api
+    Forbidden:
+      description: Role JWT không đủ quyền (vd. cần ORGANIZER).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            code: FORBIDDEN
+            message: Tài khoản không đủ quyền truy cập tài nguyên này.
+            data: null
+            timestamp: '2026-08-13T08:00:00.000Z'
+            path: /v1/api
+    NotFound:
+      description: Không tìm thấy tài nguyên.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            code: NOT_FOUND
+            message: Tài nguyên được yêu cầu không tồn tại.
+            data: null
+            timestamp: '2026-08-13T08:00:00.000Z'
+            path: /v1/api
+    Conflict:
+      description: Xung đột trạng thái (vd. đã PUBLISHED).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            code: CONFLICT
+            message: Xung đột trạng thái tài nguyên.
+            data: null
+            timestamp: '2026-08-13T08:00:00.000Z'
+            path: /v1/api
+  parameters:
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid

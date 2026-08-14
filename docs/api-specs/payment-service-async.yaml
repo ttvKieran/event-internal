@@ -1,0 +1,344 @@
+asyncapi: 2.6.0
+info:
+  title: Payment Service - Async API
+  version: 1.0.0
+servers:
+  productionBroker:
+    url: broker.events.internal.company.vn:9092
+    protocol: kafka
+    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
+      tương đương).
+  stagingBroker:
+    url: broker.events.staging.company.vn:9092
+    protocol: kafka
+channels:
+  Payment:
+    description: 'Domain Events của Aggregate `Payment` (Core Domain). Publisher —
+      Payment Service.
+
+      `PaymentSucceeded`/`PaymentFailed`/`PaymentTimedOut` là các bước Saga quan trọng
+
+      mà Registration subscribe để Confirm/Rollback.
+
+      '
+    publish:
+      operationId: emitPaymentEvent
+      summary: Payment Service phát sự kiện vòng đời giao dịch thanh toán.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/PaymentRequestedEvent'
+          - $ref: '#/components/messages/PaymentSucceededEvent'
+          - $ref: '#/components/messages/PaymentFailedEvent'
+          - $ref: '#/components/messages/PaymentTimedOutEvent'
+  Refund:
+    description: Domain Events của Aggregate `Refund`. Publisher — Payment Service.
+    publish:
+      operationId: emitRefundEvent
+      summary: Payment Service phát sự kiện vòng đời hoàn tiền.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/RefundRequestedEvent'
+          - $ref: '#/components/messages/RefundCompletedEvent'
+  payment-commands:
+    description: 'Point-to-Point — chỉ **Payment Service** subscribe. `RequestPaymentCommand`
+      khởi
+
+      phát Saga Choreography khi nghe `TemporaryCapacityHeld`. `ConfirmPaymentCommand`
+      /
+
+      `FailPaymentCommand` do ACL Adapter publish sau khi dịch webhook VNPay/Momo
+
+      (mục 3.5). `TimeoutPaymentCommand` do scheduler nội bộ phát khi quá hạn giữ
+      chỗ.
+
+      `RequestRefundCommand` publish trực tiếp từ REST layer (HA-first).
+
+      '
+    subscribe:
+      operationId: onPaymentCommand
+      summary: Payment Service (Core Domain, Partnership với Registration) nhận lệnh
+        Saga thanh toán.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/RequestPaymentCommand'
+          - $ref: '#/components/messages/ConfirmPaymentCommand'
+          - $ref: '#/components/messages/FailPaymentCommand'
+          - $ref: '#/components/messages/TimeoutPaymentCommand'
+          - $ref: '#/components/messages/RequestRefundCommand'
+components:
+  schemas:
+    PaymentRequestedEventPayload:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        gateway:
+          type: string
+          enum:
+            - VNPAY
+            - MOMO
+        requestedAt:
+          type: string
+          format: date-time
+    PaymentSucceededEventPayload:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        gatewayTransactionId:
+          type: string
+        succeededAt:
+          type: string
+          format: date-time
+    PaymentFailedEventPayload:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        failedAt:
+          type: string
+          format: date-time
+    PaymentTimedOutEventPayload:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        timedOutAt:
+          type: string
+          format: date-time
+    RefundRequestedEventPayload:
+      type: object
+      properties:
+        refundId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        requestedAt:
+          type: string
+          format: date-time
+    RefundCompletedEventPayload:
+      type: object
+      properties:
+        refundId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        completedAt:
+          type: string
+          format: date-time
+    RequestPaymentCommandPayload:
+      type: object
+      required:
+        - paymentId
+        - registrationId
+        - amount
+        - gateway
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        registrationId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        gateway:
+          type: string
+          enum:
+            - VNPAY
+            - MOMO
+    ConfirmPaymentCommandPayload:
+      type: object
+      required:
+        - paymentId
+        - gatewayTransactionId
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        gatewayTransactionId:
+          type: string
+    FailPaymentCommandPayload:
+      type: object
+      required:
+        - paymentId
+        - reason
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+    TimeoutPaymentCommandPayload:
+      type: object
+      required:
+        - paymentId
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+    RequestRefundCommandPayload:
+      type: object
+      required:
+        - refundId
+        - paymentId
+        - amount
+      properties:
+        refundId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        reason:
+          type: string
+  messages:
+    PaymentRequestedEvent:
+      name: PaymentRequestedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/PaymentRequestedEventPayload'
+    PaymentSucceededEvent:
+      name: PaymentSucceededEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/PaymentSucceededEventPayload'
+    PaymentFailedEvent:
+      name: PaymentFailedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/PaymentFailedEventPayload'
+    PaymentTimedOutEvent:
+      name: PaymentTimedOutEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/PaymentTimedOutEventPayload'
+    RefundRequestedEvent:
+      name: RefundRequestedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/RefundRequestedEventPayload'
+    RefundCompletedEvent:
+      name: RefundCompletedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/RefundCompletedEventPayload'
+    RequestPaymentCommand:
+      name: RequestPaymentCommand
+      title: RequestPaymentCommand
+      summary: Khởi tạo giao dịch thanh toán sau khi TemporarySlotHeld.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/RequestPaymentCommandPayload'
+    ConfirmPaymentCommand:
+      name: ConfirmPaymentCommand
+      title: ConfirmPaymentCommand
+      summary: ACL Adapter xác nhận thanh toán thành công từ webhook Gateway.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/ConfirmPaymentCommandPayload'
+    FailPaymentCommand:
+      name: FailPaymentCommand
+      title: FailPaymentCommand
+      summary: ACL Adapter báo thanh toán thất bại từ webhook Gateway.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/FailPaymentCommandPayload'
+    TimeoutPaymentCommand:
+      name: TimeoutPaymentCommand
+      title: TimeoutPaymentCommand
+      summary: Scheduler nội bộ báo giao dịch quá hạn giữ chỗ.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/TimeoutPaymentCommandPayload'
+    RequestRefundCommand:
+      name: RequestRefundCommand
+      title: RequestRefundCommand
+      summary: Yêu cầu hoàn tiền (publish từ REST layer, HA-first).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/RequestRefundCommandPayload'
+  messageTraits:
+    eventTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+          - timestamp
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          correlationId:
+            type: string
+            format: uuid
+            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
+          timestamp:
+            type: string
+            format: date-time
+    commandTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+        properties:
+          messageId:
+            type: string
+            format: uuid
+            description: ID duy nhất của message (idempotency key).
+          correlationId:
+            type: string
+            format: uuid
+            description: Nối các bước trong cùng một Saga/luồng nghiệp vụ.
+          replyTo:
+            type: string
+            description: Return address (topic/queue) để service xử lý gửi phản hồi
+              — phục vụ Async Request/Response.
+          timestamp:
+            type: string
+            format: date-time

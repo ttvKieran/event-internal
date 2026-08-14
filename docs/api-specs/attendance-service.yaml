@@ -1,0 +1,304 @@
+openapi: 3.0.3
+info:
+  title: Attendance Service - REST API
+  version: 1.0.0
+servers:
+  - url: https://api.events.internal.company.vn/v1
+    description: Production (qua API Gateway, mục 3.1 Context Map)
+  - url: https://api.events.staging.company.vn/v1
+    description: Staging
+paths:
+  /attendance/events/{eventId}/session:
+    post:
+      tags:
+        - Attendance
+      summary: Bật QR Check-in (Turn On Check-in)
+      description:
+        Người chủ trì (Organizer) chủ động bật QR check-in, tạo ra một
+        QRSession chứa danh sách mã QR.
+      operationId: startQRSession
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Đã tạo QR Session thành công.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QRSessionApiResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags:
+        - Attendance
+      summary: Lấy QR Session hiện tại
+      operationId: getActiveQRSession
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QRSessionApiResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /attendance/check-in/scan:
+    post:
+      tags:
+        - Attendance
+      summary: Quét QR check-in (ScanDisplayedQrForCheckIn)
+      description:
+        Quét QR để check-in. Toàn bộ nằm trong một Bounded Context (Attendance)
+        nên xử lý và phản hồi đồng bộ ngay.
+      operationId: scanCheckIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanQrRequest"
+      responses:
+        "200":
+          description: Check-in thành công.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanQrResultApiResponse"
+        "400":
+          description: QR không hợp lệ (InvalidQrScanRejected).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanQrResultApiResponse"
+        "409":
+          description: Đã check-in trước đó (DuplicateCheckInRejected).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanQrResultApiResponse"
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    QRSessionApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Thao tác QR Session thành công.
+        data:
+          $ref: "#/components/schemas/QRSession"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    QRSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        qrCode:
+          type: array
+          items:
+            type: string
+        expireAt:
+          type: string
+          format: date-time
+    ScanQrRequest:
+      type: object
+      required:
+        - qrToken
+        - employeeId
+      properties:
+        qrToken:
+          type: string
+        employeeId:
+          type: string
+    ScanQrResultApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Thao tác quét QR thành công.
+        data:
+          $ref: "#/components/schemas/ScanQrResult"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    ScanQrResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - CHECKED_IN
+            - DUPLICATE_CHECKIN_REJECTED
+            - INVALID_QR_REJECTED
+        employeeId:
+          type: string
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).
+      required:
+        - success
+        - code
+        - message
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: INVALID_INPUT
+        message:
+          type: string
+          example: Dữ liệu yêu cầu không hợp lệ.
+        data:
+          type: object
+          nullable: true
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+        path:
+          type: string
+          example: /v1/auth/login
+  responses:
+    BadRequest:
+      description: Dữ liệu đầu vào không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: BAD_REQUEST
+            message: Dữ liệu đầu vào không hợp lệ.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Unauthorized:
+      description: Thiếu hoặc JWT không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: UNAUTHORIZED
+            message: Xác thực không thành công hoặc JWT hết hạn.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Forbidden:
+      description: Role JWT không đủ quyền (vd. cần ORGANIZER).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: FORBIDDEN
+            message: Tài khoản không đủ quyền truy cập tài nguyên này.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    NotFound:
+      description: Không tìm thấy tài nguyên.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: NOT_FOUND
+            message: Tài nguyên được yêu cầu không tồn tại.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Conflict:
+      description: Xung đột trạng thái (vd. đã PUBLISHED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: CONFLICT
+            message: Xung đột trạng thái tài nguyên.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+  parameters:
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid

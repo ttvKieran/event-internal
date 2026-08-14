@@ -1,0 +1,440 @@
+openapi: 3.0.3
+info:
+  title: Registration Service - REST API
+  version: 1.0.0
+servers:
+  - url: https://api.events.internal.company.vn/v1
+    description: Production (qua API Gateway, mục 3.1 Context Map)
+  - url: https://api.events.staging.company.vn/v1
+    description: Staging
+paths:
+  /events/{eventId}/registration/open:
+    post:
+      tags:
+        - Registration
+      summary: Mở đăng ký thủ công (OpenRegistration — override)
+      description:
+        'Command **OpenRegistration** → Event `EventRegistrationOpened`.
+        Bình thường được
+
+        tự động kích hoạt bởi "At 20h Policy" khi nhận `EventPublished`
+
+        (xem AsyncAPI, kênh `registration-commands`); endpoint này cho phép Organizer
+
+        mở sớm thủ công. Chỉ ảnh hưởng Aggregate `Registration` của riêng Registration
+
+        Context nên vẫn đồng bộ.
+
+        '
+      operationId: openRegistration
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Đăng ký đã mở.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: string
+                    format: uuid
+                  registrationStatus:
+                    type: string
+                    enum:
+                      - OPEN
+                  opensAt:
+                    type: string
+                    format: date-time
+  /registrations:
+    post:
+      tags:
+        - Registration
+      summary: Đăng ký tham gia sự kiện (RegisterForEvent)
+      description:
+        "**High Availability First**: `RegisterForEvent` băng qua Resource
+        Context
+
+        (claim/hold slot) và với vé PAID còn băng qua Payment Context (Saga Choreography,
+
+        mục 3.4). API **không chờ** các bước đó — publish nội bộ
+
+        `RegisterForEventCommand` lên kênh AsyncAPI `registration-commands` rồi trả
+
+        `202 Accepted` ngay với trạng thái `REGISTRATION_PENDING`.
+
+        Kết quả cuối (`FreeRegistrationConfirmed` / `PaidRegistrationConfirmed` /
+
+        `PaidRegistrationRolledBack`) client theo dõi qua
+
+        `GET /registrations/{registrationId}` (poll) hoặc subscribe kênh Event
+
+        `Registration`.
+
+        "
+      operationId: registerForEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterForEventRequest"
+      responses:
+        "202":
+          description: Yêu cầu đăng ký đã được tiếp nhận, đang xử lý bất đồng bộ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AsyncOperationApiResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags:
+        - Registration
+      summary: Danh sách đăng ký (theo event hoặc theo nhân viên)
+      operationId: listRegistrations
+      parameters:
+        - name: eventId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - REGISTRATION_PENDING
+              - FREE_CONFIRMED
+              - PAID_CONFIRMED
+              - PAID_ROLLED_BACK
+              - CANCELLED
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationListApiResponse"
+  /registrations/{registrationId}:
+    get:
+      tags:
+        - Registration
+      summary: My Registration Status (Read Model)
+      operationId: getRegistration
+      parameters:
+        - $ref: "#/components/parameters/RegistrationId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationApiResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /registrations/{registrationId}/cancel:
+    post:
+      tags:
+        - Registration
+      summary: Hủy đăng ký (CancelRegistration)
+      description:
+        "Publish nội bộ `CancelRegistrationCommand` (kênh `registration-commands`);
+
+        việc giải phóng slot bên Resource Context (`ReleaseSlot`) chạy bất đồng bộ
+        theo
+
+        Event `RegistrationCancelled`. Trả `202 Accepted` ngay theo nguyên tắc HA-first.
+
+        "
+      operationId: cancelRegistration
+      parameters:
+        - $ref: "#/components/parameters/RegistrationId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "202":
+          description: Yêu cầu hủy đã tiếp nhận, đang xử lý.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AsyncOperationApiResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    RegisterForEventRequest:
+      type: object
+      required:
+        - eventId
+      properties:
+        eventId:
+          type: string
+          format: uuid
+    AsyncOperationApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: ACCEPTED
+        message:
+          type: string
+          example: Yêu cầu đã được tiếp nhận và xử lý bất đồng bộ.
+        data:
+          $ref: "#/components/schemas/AsyncOperationAccepted"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    AsyncOperationAccepted:
+      type: object
+      description: Response chuẩn cho mọi write đi qua nhiều Bounded Context (HA-first).
+      required:
+        - resourceId
+        - status
+        - submittedAt
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+          description: ID của Registration/Refund vừa khởi tạo.
+        status:
+          type: string
+          example: REGISTRATION_PENDING
+        statusCheckUrl:
+          type: string
+          format: uri
+        submittedAt:
+          type: string
+          format: date-time
+    RegistrationListApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Lấy danh sách đăng ký thành công.
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Registration"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    Registration:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        ticketType:
+          type: string
+          enum:
+            - FREE
+            - PAID
+        status:
+          type: string
+          enum:
+            - REGISTRATION_PENDING
+            - FREE_CONFIRMED
+            - PAID_CONFIRMED
+            - PAID_ROLLED_BACK
+            - CANCELLED
+        registeredAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RegistrationApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Thao tác đăng ký thành công.
+        data:
+          $ref: "#/components/schemas/Registration"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+    ErrorResponse:
+      type: object
+      description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).
+      required:
+        - success
+        - code
+        - message
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: INVALID_INPUT
+        message:
+          type: string
+          example: Dữ liệu yêu cầu không hợp lệ.
+        data:
+          type: object
+          nullable: true
+          example: null
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
+        path:
+          type: string
+          example: /v1/auth/login
+  responses:
+    BadRequest:
+      description: Dữ liệu đầu vào không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: BAD_REQUEST
+            message: Dữ liệu đầu vào không hợp lệ.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Unauthorized:
+      description: Thiếu hoặc JWT không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: UNAUTHORIZED
+            message: Xác thực không thành công hoặc JWT hết hạn.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Forbidden:
+      description: Role JWT không đủ quyền (vd. cần ORGANIZER).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: FORBIDDEN
+            message: Tài khoản không đủ quyền truy cập tài nguyên này.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    NotFound:
+      description: Không tìm thấy tài nguyên.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: NOT_FOUND
+            message: Tài nguyên được yêu cầu không tồn tại.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+    Conflict:
+      description: Xung đột trạng thái (vd. đã PUBLISHED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            code: CONFLICT
+            message: Xung đột trạng thái tài nguyên.
+            data: null
+            timestamp: "2026-08-13T08:00:00.000Z"
+            path: /v1/api
+  parameters:
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid

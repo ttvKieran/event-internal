@@ -1,0 +1,138 @@
+asyncapi: 2.6.0
+info:
+  title: Attendance Service - Async API
+  version: 1.0.0
+servers:
+  productionBroker:
+    url: broker.events.internal.company.vn:9092
+    protocol: kafka
+    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
+      tương đương).
+  stagingBroker:
+    url: broker.events.staging.company.vn:9092
+    protocol: kafka
+channels:
+  QRSession:
+    description: Domain Events của Aggregate `QRSession`. Publisher — Attendance Service.
+    publish:
+      operationId: emitQRSessionEvent
+      summary: Attendance Service phát sự kiện khi Organizer chủ động bật check-in.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/QRSessionStartedEvent'
+  Attendance:
+    description: 'Domain Events của Aggregate `Attendance`. Publisher — Attendance
+      Service.
+
+      Analytics subscribe `ParticipantCheckedIn` để tính Check-in Rate thời gian thực.
+
+      '
+    publish:
+      operationId: emitAttendanceEvent
+      summary: Attendance Service phát sự kiện kết quả xác thực lượt quét QR.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/ParticipantCheckedInEvent'
+          - $ref: '#/components/messages/DuplicateCheckInRejectedEvent'
+          - $ref: '#/components/messages/InvalidQrScanRejectedEvent'
+components:
+  schemas:
+    QRSessionStartedEventPayload:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        qrCode:
+          type: array
+          items:
+            type: string
+        startedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    ParticipantCheckedInEventPayload:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        checkedInAt:
+          type: string
+          format: date-time
+    DuplicateCheckInRejectedEventPayload:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        attemptedAt:
+          type: string
+          format: date-time
+    InvalidQrScanRejectedEventPayload:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          nullable: true
+        scannedToken:
+          type: string
+        reason:
+          type: string
+        attemptedAt:
+          type: string
+          format: date-time
+  messages:
+    QRSessionStartedEvent:
+      name: QRSessionStartedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/QRSessionStartedEventPayload'
+    ParticipantCheckedInEvent:
+      name: ParticipantCheckedInEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/ParticipantCheckedInEventPayload'
+    DuplicateCheckInRejectedEvent:
+      name: DuplicateCheckInRejectedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/DuplicateCheckInRejectedEventPayload'
+    InvalidQrScanRejectedEvent:
+      name: InvalidQrScanRejectedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/InvalidQrScanRejectedEventPayload'
+  messageTraits:
+    eventTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+          - timestamp
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          correlationId:
+            type: string
+            format: uuid
+            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
+          timestamp:
+            type: string
+            format: date-time

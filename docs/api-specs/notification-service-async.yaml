@@ -1,0 +1,235 @@
+asyncapi: 2.6.0
+info:
+  title: Notification Service - Async API
+  version: 1.0.0
+servers:
+  productionBroker:
+    url: broker.events.internal.company.vn:9092
+    protocol: kafka
+    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
+      tương đương).
+  stagingBroker:
+    url: broker.events.staging.company.vn:9092
+    protocol: kafka
+channels:
+  Notification:
+    description: Domain Events của Aggregate `Notification`. Publisher — Notification
+      Service.
+    publish:
+      operationId: emitNotificationEvent
+      summary: Notification Service xác nhận đã gửi thông báo tới Email/Push/Calendar
+        Provider.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/RegistrationConfirmationNotificationSentEvent'
+          - $ref: '#/components/messages/PaymentFailureNotificationSentEvent'
+          - $ref: '#/components/messages/EventReminderNotificationSentEvent'
+          - $ref: '#/components/messages/CancellationNotificationSentEvent'
+  notification-commands:
+    description: 'Point-to-Point — chỉ **Notification Service** subscribe. Toàn bộ
+      Command tại đây
+
+      do các Policy phát sinh từ Event của Registration/Payment/Event Planning/Attendance
+
+      (Confirmation Notification Policy, Payment Failure Notification Policy,
+
+      Cancellation Notification Policy, Event Start QR Policy).
+
+      '
+    subscribe:
+      operationId: onNotificationCommand
+      summary: Notification Service (Generic Domain) nhận lệnh gửi thông báo.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/SendConfirmationNotificationCommand'
+          - $ref: '#/components/messages/SendPaymentFailureNotificationCommand'
+          - $ref: '#/components/messages/SendEventReminderCommand'
+          - $ref: '#/components/messages/SendCancellationNotificationCommand'
+components:
+  schemas:
+    NotificationSentEventPayload:
+      type: object
+      description: Payload chung cho các Event *NotificationSent (Confirmation/PaymentFailure/Reminder/Cancellation).
+      properties:
+        notificationId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        registrationId:
+          type: string
+          format: uuid
+          nullable: true
+        eventId:
+          type: string
+          format: uuid
+          nullable: true
+        channel:
+          type: string
+          enum:
+            - EMAIL
+            - PUSH
+            - CALENDAR
+        sentAt:
+          type: string
+          format: date-time
+    SendConfirmationNotificationCommandPayload:
+      type: object
+      required:
+        - registrationId
+        - employeeId
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+            enum:
+              - EMAIL
+              - PUSH
+    SendPaymentFailureNotificationCommandPayload:
+      type: object
+      required:
+        - registrationId
+        - employeeId
+        - reason
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        reason:
+          type: string
+    SendEventReminderCommandPayload:
+      type: object
+      required:
+        - eventId
+        - employeeIds
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        employeeIds:
+          type: array
+          items:
+            type: string
+    SendCancellationNotificationCommandPayload:
+      type: object
+      required:
+        - employeeIds
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          nullable: true
+        registrationId:
+          type: string
+          format: uuid
+          nullable: true
+        employeeIds:
+          type: array
+          items:
+            type: string
+  messages:
+    RegistrationConfirmationNotificationSentEvent:
+      name: RegistrationConfirmationNotificationSentEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/NotificationSentEventPayload'
+    PaymentFailureNotificationSentEvent:
+      name: PaymentFailureNotificationSentEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/NotificationSentEventPayload'
+    EventReminderNotificationSentEvent:
+      name: EventReminderNotificationSentEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/NotificationSentEventPayload'
+    CancellationNotificationSentEvent:
+      name: CancellationNotificationSentEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/NotificationSentEventPayload'
+    SendConfirmationNotificationCommand:
+      name: SendConfirmationNotificationCommand
+      title: SendConfirmationNotificationCommand
+      summary: Gửi thông báo xác nhận đăng ký (Confirmation Notification Policy).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/SendConfirmationNotificationCommandPayload'
+    SendPaymentFailureNotificationCommand:
+      name: SendPaymentFailureNotificationCommand
+      title: SendPaymentFailureNotificationCommand
+      summary: Gửi thông báo thanh toán thất bại (Payment Failure Notification Policy).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/SendPaymentFailureNotificationCommandPayload'
+    SendEventReminderCommand:
+      name: SendEventReminderCommand
+      title: SendEventReminderCommand
+      summary: Gửi nhắc lịch sự kiện (Event Start QR Policy).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/SendEventReminderCommandPayload'
+    SendCancellationNotificationCommand:
+      name: SendCancellationNotificationCommand
+      title: SendCancellationNotificationCommand
+      summary: Gửi thông báo hủy đăng ký/sự kiện (Cancellation Notification Policy).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/SendCancellationNotificationCommandPayload'
+  messageTraits:
+    eventTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+          - timestamp
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          correlationId:
+            type: string
+            format: uuid
+            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
+          timestamp:
+            type: string
+            format: date-time
+    commandTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+        properties:
+          messageId:
+            type: string
+            format: uuid
+            description: ID duy nhất của message (idempotency key).
+          correlationId:
+            type: string
+            format: uuid
+            description: Nối các bước trong cùng một Saga/luồng nghiệp vụ.
+          replyTo:
+            type: string
+            description: Return address (topic/queue) để service xử lý gửi phản hồi
+              — phục vụ Async Request/Response.
+          timestamp:
+            type: string
+            format: date-time

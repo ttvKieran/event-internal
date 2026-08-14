@@ -1,0 +1,357 @@
+asyncapi: 2.6.0
+info:
+  title: Registration Service - Async API
+  version: 1.0.0
+servers:
+  productionBroker:
+    url: broker.events.internal.company.vn:9092
+    protocol: kafka
+    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
+      tương đương).
+  stagingBroker:
+    url: broker.events.staging.company.vn:9092
+    protocol: kafka
+channels:
+  Registration:
+    description: 'Domain Events của Aggregate `Registration` (Core Domain). Publisher
+      — Registration
+
+      Service. `Registration ⟺ Payment` là Partnership — cả hai lắng nghe Event của
+      nhau
+
+      để chạy Saga Choreography (mục 3.4).
+
+      '
+    publish:
+      operationId: emitRegistrationEvent
+      summary: Registration Service phát sự kiện vòng đời đăng ký.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/EventRegistrationOpenedEvent'
+          - $ref: '#/components/messages/RegistrationRequestedEvent'
+          - $ref: '#/components/messages/FreeRegistrationConfirmedEvent'
+          - $ref: '#/components/messages/PaidRegistrationConfirmedEvent'
+          - $ref: '#/components/messages/PaidRegistrationRolledBackEvent'
+          - $ref: '#/components/messages/RegistrationCancelledEvent'
+  registration-commands:
+    description: 'Point-to-Point — chỉ **Registration Service** subscribe. Bao gồm
+      cả Command được
+
+      publish trực tiếp từ REST layer (`RegisterForEventCommand`,
+
+      `CancelRegistrationCommand` — theo mô hình HA-first) và Command do Policy nội
+      bộ
+
+      phát sinh khi phản ứng Event từ Context khác
+
+      (`OpenRegistrationCommand` ← At 20h Policy nghe `EventPublished`;
+
+      `ConfirmFreeRegistrationCommand` ← nghe `CapacityClaimed`;
+
+      `ConfirmPaidRegistrationCommand` ← Payment Success Policy nghe `PaymentSucceeded`;
+
+      `RollbackPaidRegistrationCommand` ← Payment Failure/Timeout Policy nghe
+
+      `PaymentFailed`/`PaymentTimedOut`).
+
+      '
+    subscribe:
+      operationId: onRegistrationCommand
+      summary: Registration Service (Core Domain) nhận lệnh xử lý đăng ký.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/OpenRegistrationCommand'
+          - $ref: '#/components/messages/RegisterForEventCommand'
+          - $ref: '#/components/messages/ConfirmFreeRegistrationCommand'
+          - $ref: '#/components/messages/ConfirmPaidRegistrationCommand'
+          - $ref: '#/components/messages/RollbackPaidRegistrationCommand'
+          - $ref: '#/components/messages/CancelRegistrationCommand'
+components:
+  schemas:
+    EventRegistrationOpenedEventPayload:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        opensAt:
+          type: string
+          format: date-time
+    RegistrationRequestedEventPayload:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        ticketType:
+          type: string
+          enum:
+            - FREE
+            - PAID
+        registeredAt:
+          type: string
+          format: date-time
+    FreeRegistrationConfirmedEventPayload:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+    PaidRegistrationConfirmedEventPayload:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        paymentId:
+          type: string
+          format: uuid
+        confirmedAt:
+          type: string
+          format: date-time
+    PaidRegistrationRolledBackEventPayload:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        rolledBackAt:
+          type: string
+          format: date-time
+    RegistrationCancelledEventPayload:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+    OpenRegistrationCommandPayload:
+      type: object
+      required:
+        - eventId
+      properties:
+        eventId:
+          type: string
+          format: uuid
+    RegisterForEventCommandPayload:
+      type: object
+      required:
+        - registrationId
+        - eventId
+        - employeeId
+        - ticketType
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+          description: Sinh sẵn ở REST layer để trả về client ngay lúc 202 Accepted.
+        eventId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        ticketType:
+          type: string
+          enum:
+            - FREE
+            - PAID
+    ConfirmFreeRegistrationCommandPayload:
+      type: object
+      required:
+        - registrationId
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+    ConfirmPaidRegistrationCommandPayload:
+      type: object
+      required:
+        - registrationId
+        - paymentId
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+    RollbackPaidRegistrationCommandPayload:
+      type: object
+      required:
+        - registrationId
+        - reason
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          enum:
+            - PAYMENT_FAILED
+            - PAYMENT_TIMED_OUT
+    CancelRegistrationCommandPayload:
+      type: object
+      required:
+        - registrationId
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+  messages:
+    EventRegistrationOpenedEvent:
+      name: EventRegistrationOpenedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/EventRegistrationOpenedEventPayload'
+    RegistrationRequestedEvent:
+      name: RegistrationRequestedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/RegistrationRequestedEventPayload'
+    FreeRegistrationConfirmedEvent:
+      name: FreeRegistrationConfirmedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/FreeRegistrationConfirmedEventPayload'
+    PaidRegistrationConfirmedEvent:
+      name: PaidRegistrationConfirmedEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/PaidRegistrationConfirmedEventPayload'
+    PaidRegistrationRolledBackEvent:
+      name: PaidRegistrationRolledBackEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/PaidRegistrationRolledBackEventPayload'
+    RegistrationCancelledEvent:
+      name: RegistrationCancelledEvent
+      traits:
+        - $ref: '#/components/messageTraits/eventTrait'
+      payload:
+        $ref: '#/components/schemas/RegistrationCancelledEventPayload'
+    OpenRegistrationCommand:
+      name: OpenRegistrationCommand
+      title: OpenRegistrationCommand
+      summary: Mở đăng ký cho một sự kiện (tự động lúc 20h hoặc thủ công).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/OpenRegistrationCommandPayload'
+    RegisterForEventCommand:
+      name: RegisterForEventCommand
+      title: RegisterForEventCommand
+      summary: Yêu cầu đăng ký tham gia sự kiện (publish từ REST layer, HA-first).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/RegisterForEventCommandPayload'
+    ConfirmFreeRegistrationCommand:
+      name: ConfirmFreeRegistrationCommand
+      title: ConfirmFreeRegistrationCommand
+      summary: Xác nhận đăng ký vé miễn phí sau khi SlotClaimed.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/ConfirmFreeRegistrationCommandPayload'
+    ConfirmPaidRegistrationCommand:
+      name: ConfirmPaidRegistrationCommand
+      title: ConfirmPaidRegistrationCommand
+      summary: Xác nhận đăng ký vé thu phí sau khi PaymentSucceeded.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/ConfirmPaidRegistrationCommandPayload'
+    RollbackPaidRegistrationCommand:
+      name: RollbackPaidRegistrationCommand
+      title: RollbackPaidRegistrationCommand
+      summary: Compensating transaction khi thanh toán thất bại/timeout.
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/RollbackPaidRegistrationCommandPayload'
+    CancelRegistrationCommand:
+      name: CancelRegistrationCommand
+      title: CancelRegistrationCommand
+      summary: Yêu cầu hủy đăng ký (publish từ REST layer, HA-first).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/CancelRegistrationCommandPayload'
+  messageTraits:
+    eventTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+          - timestamp
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          correlationId:
+            type: string
+            format: uuid
+            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
+          timestamp:
+            type: string
+            format: date-time
+    commandTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+        properties:
+          messageId:
+            type: string
+            format: uuid
+            description: ID duy nhất của message (idempotency key).
+          correlationId:
+            type: string
+            format: uuid
+            description: Nối các bước trong cùng một Saga/luồng nghiệp vụ.
+          replyTo:
+            type: string
+            description: Return address (topic/queue) để service xử lý gửi phản hồi
+              — phục vụ Async Request/Response.
+          timestamp:
+            type: string
+            format: date-time

@@ -1,70 +1,15 @@
 # Analysis and Design — Domain-Driven Design Approach
 
-> **Goal**: Analyze a specific business process and design a service-oriented automation solution using Domain-Driven Design.
-> **Scope**: 4–6 week assignment — focus on **one business process**, not an entire system.
->
-> **Alternative to**: [`analysis-and-design.md`](analysis-and-design.md) (Step-by-Step Action approach).
-> Choose **one** approach, not both. Use this if your team prefers discovering service boundaries through **domain knowledge and business semantics** rather than action decomposition.
-
-**References:**
-1. *Domain-Driven Design: Tackling Complexity in the Heart of Software* — Eric Evans
-2. *Microservices Patterns: With Examples in Java* — Chris Richardson
-3. *Bài tập — Phát triển phần mềm hướng dịch vụ* — Hung Dang (available in Vietnamese)
-
----
-
-### How DDD differs from Step-by-Step Action
-
-| | Step-by-Step Action | DDD (this document) |
-|---|---|---|
-| **Thinking direction** | Bottom-up: concrete actions → group → service | Dual: top-down framing + bottom-up discovery |
-| **Service boundary decided by** | Similarity of actions/functions | Semantic boundary of business domain |
-| **Best suited for** | Small–medium systems, clearer technical scope | Complex business logic, multiple subdomains |
-| **Key risk** | Services may be fragmented by technical logic | Requires deep domain understanding upfront |
-
-Both approaches lead to a list of services with clear responsibilities. DDD produces services aligned with *business boundaries* — changes in one business area only affect the corresponding service.
-
-> 💡 **DDD's dual direction explained:**
-> - **Top-down — strategic framing**: you start by understanding the business domain as a whole, building a shared vocabulary (Ubiquitous Language) before touching any implementation detail. This prevents premature fragmentation by technical concerns.
-> - **Bottom-up — tactical discovery (Event Storming)**: within the domain, you discover the structure by listing granular events → tracing commands → clustering aggregates → drawing bounded contexts. This is deliberately bottom-up so that structure *emerges* from real business facts rather than being imposed from a high-level guess.
->
-> The combination is intentional: the domain framing guides *what* you're looking for, while Event Storming builds it *from the ground up* using business evidence.
-
-### Progression Overview
-
-| Step | What you do | Output |
-|------|------------|--------|
-| **1.1** | Define the Business Process | Process diagram, actors, scope |
-| **1.2** | Survey existing systems | System inventory |
-| **1.3** | State non-functional requirements | NFR table |
-| **2.1** | Build a shared domain vocabulary | Ubiquitous Language glossary |
-| **2.2** | Discover Domain Events via Event Storming | Chronological event list |
-| **2.3** | Identify Commands and Actors | Command → Event mapping |
-| **2.4** | Form Aggregates from related Commands/Events | Aggregate table with owned data |
-| **2.5** | Draw Bounded Contexts around Aggregates | Bounded Context → service candidate |
-| **2.6** | Map relationships between Bounded Contexts | Context Map diagram + relationship table |
-| **2.7** | Design service interactions | Service composition diagram |
-| **3.1** | Specify service contracts | OpenAPI endpoint tables |
-| **3.2** | Design internal service logic | Flowchart per service |
-
----
-
 ## Part 1 — Domain Discovery
 
 ### 1.1 Business Process Definition
 
-Describe the **one** business process your team will automate. Keep scope realistic for 4–6 weeks.
-
-- **Domain**: *(e.g., Online Food Delivery, University Course Registration, ...)*
-- **Business Process**: *(e.g., "Customer places an order and receives delivery")*
-- **Actors**: *(e.g., Customer, Restaurant Owner, Delivery Driver)*
-- **Scope**: *(e.g., "From order placement to delivery confirmation — excluding payment settlement")*
-
-**Process Diagram:**
-
-*(Insert BPMN, flowchart, or image into `docs/asset/` and reference here)*
-
-> 💡 **Tip:** A good scope for this assignment is a process with 5–15 steps and 2–4 actors. If your process has more than 20 steps, narrow the scope.
+- **Domain**: Hệ thống Quản lý Sự kiện Nội bộ Doanh nghiệp (Internal Event Management).
+- **Business Process**: Vòng đời tổ chức và tham gia sự kiện nội bộ, bao gồm việc lên kế hoạch, đăng ký (miễn phí/có phí), thanh toán, điểm danh bằng QR và thống kê.
+- **Actors**:
+  - **Organizer (Ban tổ chức):** Tạo, cấu hình sự kiện, quản lý tài nguyên, phát hành QR điểm danh, theo dõi thống kê.
+  - **Employee (Nhân viên):** Xem danh sách sự kiện, đăng ký tham gia, thanh toán vé (nếu có), quét QR để điểm danh.
+- **Scope**: Từ khi tạo sự kiện, quản lý tài nguyên, mở đăng ký, xử lý thanh toán (Saga) cho đến khi sự kiện kết thúc và thống kê check-in.
 
 ### 1.2 Existing Automation Systems
 
@@ -72,232 +17,187 @@ List existing systems, databases, or legacy logic related to this process.
 
 | System Name | Type | Current Role | Interaction Method |
 |-------------|------|--------------|-------------------|
-|             |      |              |                   |
-
-> If none exist, state: *"None — the process is currently performed manually."*
+| Payment Gateway (VNPay/Momo) | External Payment | Xử lý giao dịch thanh toán vé sự kiện | Sync REST + Async Webhook |
 
 ### 1.3 Non-Functional Requirements
 
-Non-functional requirements help justify design decisions in later steps (e.g., why a particular bounded context deserves an independent service).
+Non-functional requirements help justify design decisions in later steps.
 
 | Requirement    | Description |
 |----------------|-------------|
-| Performance    |             |
-| Security       |             |
-| Scalability    |             |
-| Availability   |             |
+| Performance    | ...         |
+| Security       | ...         |
+| Scalability    | ...         |
+| Availability   | ...         |
 
 ---
 
 ## Part 2 — Strategic Domain-Driven Design
 
-> In DDD, **strategic framing is top-down** (we understand the domain vocabulary and boundaries first), but **tactical discovery is bottom-up** (we list events → trace commands → cluster aggregates → draw bounded contexts). This dual direction is what makes DDD powerful: domain knowledge guides the discovery, while bottom-up evidence prevents over-engineering boundaries that don't reflect real business facts.
-
 ### 2.1 Ubiquitous Language
-
-Before diving into events and commands, build a **shared vocabulary** — the Ubiquitous Language. This ensures everyone (developer, BA, domain expert) uses the same terms consistently.
-
-> 💡 **How to do it:** List every important noun and verb that appears when you describe the business process. Give each term a precise definition. Avoid synonyms — pick one term and stick with it.
 
 | Term | Definition | Example |
 |------|-----------|---------|
-| *(e.g., Order)* | *(A request from a customer to purchase one or more menu items)* | *(Customer places an Order containing 2 pizzas)* |
-| *(e.g., Fulfillment)* | *(The process of preparing and delivering an order to the customer)* | *(Restaurant marks the Order as ready for Fulfillment)* |
-|      |           |         |
-
-> ⚠️ **Common mistake:** Using the same word with different meanings in different contexts (e.g., "Account" means a user profile in one place but a financial ledger in another). If this happens, it's a strong signal that you have **two Bounded Contexts**.
+| **Event** | Sự kiện nội bộ do công ty tổ chức, có giới hạn sức chứa, thời gian bắt đầu và kết thúc rõ ràng. | Organizer tạo Event "Tech Talk 2026". |
+| **Resource** | Tài nguyên vật lý (phòng họp, hội trường) được dùng để tổ chức Event. | Event được gán Resource là "Hội trường A". |
+| **Slot** | Một suất trống hoặc chỗ ngồi trong Resource/Event. | Employee claim 1 Slot khi đăng ký. |
+| **Registration** | Hồ sơ đăng ký tham gia sự kiện của một Employee. | Employee gửi yêu cầu Registration. |
+| **Payment (Saga)** | Quy trình thanh toán cho vé sự kiện trả phí, liên kết chặt chẽ với Registration. | Hệ thống khởi tạo Payment Requested. |
+| **QR Session** | Phiên quét mã QR được chiếu lên màn hình để điểm danh. | Organizer làm mới QR Session sau mỗi 30 giây. |
+| **Attendance** | Kết quả điểm danh của Employee tại sự kiện. | Employee quét QR để ghi nhận Attendance. |
 
 ### 2.2 Event Storming — Domain Events
 
-**Domain Events** are things that **have happened** in the business process. Write them in **past tense**.
-
-> 💡 **How to do it:** Walk through the business process from start to finish. At each step, ask: *"What just happened that the business cares about?"* Write it down as a Domain Event. Don't worry about grouping yet — just list them in chronological order.
+https://miro.com/app/board/uXjVHykfwH4=/
 
 | # | Domain Event | Description |
 |---|-------------|-------------|
-| 1 | *(e.g., OrderPlaced)* | *(Customer submitted an order with items and delivery address)* |
-| 2 | *(e.g., OrderConfirmed)* | *(Restaurant accepted the order and started preparation)* |
-| 3 | *(e.g., PaymentReceived)* | *(Payment for the order was successfully processed)* |
-|   |             |             |
-
-> 💡 **How many events?** For a process with 5–15 steps, expect 8–20 domain events. If you have fewer than 5, your process may be too simple; if more than 30, consider narrowing scope.
+| 1 | `EmployeeLoggedIn` | Nhân viên hoặc Ban tổ chức đăng nhập thành công. |
+| 2 | `ResourceCreated` / `ResourceConfigured` | Tài nguyên (phòng/thiết bị) được tạo và cấu hình. |
+| 3 | `EventCreated` / `EventDetailsConfigured` / `EventPublished` | Sự kiện được tạo, cấu hình và công bố. |
+| 4 | `EventRegistrationOpened` | Sự kiện chính thức mở đăng ký theo lịch. |
+| 5 | `SlotClaimed` / `TemporarySlotHeld` / `SlotReleased` | Một chỗ ngồi được xác nhận, giữ chỗ tạm thời (chờ thanh toán), hoặc nhả ra. |
+| 6 | `RegistrationRequested` | Nhân viên gửi yêu cầu đăng ký tham gia sự kiện. |
+| 7 | `FreeRegistrationConfirmed` / `PaidRegistrationConfirmed` | Đăng ký được xác nhận (miễn phí hoặc đã thanh toán thành công). |
+| 8 | `PaymentRequested` / `PaymentSucceeded` / `PaymentFailed` | Giao dịch thanh toán được khởi tạo, thành công hoặc thất bại. |
+| 9 | `PaidRegistrationRolledBack` / `RegistrationCancelled` | Đăng ký bị hủy (do timeout thanh toán hoặc do nhân viên tự hủy). |
+| 10 | `ConfirmationSent` / `ReminderSent` | Gửi email thông báo xác nhận hoặc nhắc nhở tham gia sự kiện. |
+| 11 | `SharedCheckInQrDisplayed` / `SharedQrRefreshed` | Mã QR dùng chung được hiển thị trên màn hình và tự làm mới. |
+| 12 | `SharedQrScannedForCheckIn` / `ParticipantCheckedIn` | Nhân viên quét QR và được ghi nhận check-in thành công. |
+| 13 | `RegistrationMetricsUpdated` / `AttendanceMetricsUpdated` | Số liệu thống kê đăng ký, điểm danh được cập nhật (CQRS). |
 
 ### 2.3 Commands and Actors
 
-A **Command** is the action that **causes** a Domain Event to happen. Every event should trace back to at least one command.
-
-> 💡 **How to do it:** For each Domain Event in 2.2, ask: *"What action triggered this?"* and *"Who performed that action?"* Use **imperative** form (e.g., "PlaceOrder", not "OrderPlaced").
-
 | Command | Actor | Triggers Event(s) | Description |
 |---------|-------|--------------------|-------------|
-| *(e.g., PlaceOrder)* | *(Customer)* | *(OrderPlaced)* | *(Customer submits selected items with delivery info)* |
-| *(e.g., ConfirmOrder)* | *(Restaurant Owner)* | *(OrderConfirmed)* | *(Restaurant accepts and begins preparing the order)* |
-|         |       |                    |             |
-
-> ⚠️ **Check:** Every Domain Event from 2.2 should appear in the "Triggers Event(s)" column at least once. If an event has no command, it might be triggered by another event (event chaining) — note that in the Description.
+| `Login` | Employee/Organizer | `EmployeeLoggedIn` | Đăng nhập hệ thống |
+| `CreateResource` / `ConfigureResource` | Organizer | `ResourceCreated`, `ResourceConfigured` | Khai báo và cấu hình sức chứa phòng ban |
+| `CreateEvent` / `PublishEvent` | Organizer | `EventCreated`, `EventPublished` | Tạo và công bố sự kiện |
+| `RegisterForEvent` | Employee | `RegistrationRequested` | Nhân viên đăng ký tham gia sự kiện |
+| `ClaimSlot` / `HoldSlotTemporarily` | System (Policy) | `SlotClaimed`, `TemporarySlotHeld` | Xử lý giữ chỗ / khóa chỗ tùy vào loại vé |
+| `RequestPayment` / `ConfirmPayment` | System / Gateway | `PaymentRequested`, `PaymentSucceeded` | Xử lý giao dịch với VNPay/Momo |
+| `RollbackPaidRegistration` | System (Saga) | `PaidRegistrationRolledBack`, `SlotReleased` | Hoàn tác đăng ký nếu thanh toán lỗi/timeout |
+| `DisplayCheckInQr` / `RefreshSharedQr` | Organizer | `SharedCheckInQrDisplayed`, `SharedQrRefreshed` | Hiển thị mã QR điểm danh lên màn hình |
+| `ScanDisplayedQrForCheckIn` | Employee | `SharedQrScannedForCheckIn`, `ParticipantCheckedIn` | Nhân viên dùng điện thoại quét mã |
+| `UpdateRegistrationMetrics` | System (CQRS) | `RegistrationMetricsUpdated` | Cập nhật dashboard thống kê |
 
 ### 2.4 Aggregates
 
-An **Aggregate** is a cluster of closely related data and behavior, grouped around a **root entity**. The Aggregate enforces business rules for that cluster.
-
-> 💡 **How to do it:** Look at your Commands and Events from 2.2–2.3. Ask: *"Which business entity does this command operate on?"* Commands that modify the same entity and its closely related data belong to the same Aggregate.
-
 | Aggregate | Root Entity | Commands | Domain Events | Key Business Rules |
 |-----------|------------|----------|---------------|--------------------|
-| *(e.g., Order)* | *(Order)* | *(PlaceOrder, CancelOrder)* | *(OrderPlaced, OrderCancelled)* | *(Order total must be > 0; max 50 items per order)* |
-| *(e.g., Payment)* | *(Payment)* | *(ProcessPayment, RefundPayment)* | *(PaymentReceived, PaymentRefunded)* | *(Payment amount must match order total)* |
-|           |          |          |               |                    |
-
-> 💡 **Rule of thumb:** If two pieces of data **must be updated together** to keep the business consistent, they belong in the same Aggregate. If they can change independently, they probably belong to different Aggregates.
+| **EmployeeAccount** | `EmployeeAccount` | `Login` | `EmployeeLoggedIn` | Phân quyền ORGANIZER / EMPLOYEE |
+| **Resource** | `Resource` | `CreateResource`, `ConfigureResource` | `ResourceCreated` | Cấu hình loại, trạng thái, sức chứa |
+| **Slot** | `Capacity` (VO) | `ClaimSlot`, `HoldSlotTemporarily`, `ReleaseSlot` | `SlotClaimed`, `TemporarySlotHeld` | Không vượt quá `Capacity`, giữ chỗ có timeout |
+| **Event** | `Event` | `CreateEvent`, `ConfigureDetails`, `PublishEvent` | `EventPublished`, `EventCancelled` | Validation thời gian bắt đầu/kết thúc, vé FREE/PAID |
+| **Registration** | `Registration` | `RegisterForEvent`, `ConfirmPaid`, `RollbackPaid` | `RegistrationRequested`, `PaidRegistrationConfirmed` | 1 Employee chỉ đăng ký 1 lần/Event |
+| **Payment** | `Payment` | `RequestPayment`, `ConfirmPayment`, `FailPayment` | `PaymentSucceeded`, `PaymentFailed` | Saga: PaymentFailed -> Rollback Registration |
+| **Notification** | `Notification` | `SendConfirmation`, `SendReminder` | `ConfirmationSent`, `ReminderSent` | Phân phối qua Email/Push dựa theo Channel |
+| **QRSession** | `QRSession` | `DisplayCheckInQr`, `RefreshSharedQr` | `SharedQrRefreshed` | Token quét chỉ có hiệu lực ngắn hạn (vd: 30s) |
+| **Attendance** | `Attendance` | `ValidateSharedQrForCheckIn` | `ParticipantCheckedIn`, `DuplicateCheckInRejected` | Ngăn chặn Check-in trùng lặp |
+| **EventMetrics** | `EventMetrics` | `UpdateRegistrationMetrics`, `UpdateAttendanceMetrics` | `CheckInRateCalculated` | Read Model tổng hợp dữ liệu từ Event Stream |
 
 ### 2.5 Bounded Contexts
 
-A **Bounded Context** is a boundary within which the Ubiquitous Language (2.1) has a single, consistent meaning. Each Bounded Context becomes a **service candidate**.
-
-> 💡 **How to do it:** Look at your Aggregates from 2.4. Ask:
-> 1. *"Do these Aggregates share the same language/terms with the same meaning?"*
-> 2. *"Would they be managed by the same team or business unit?"*
-> 3. *"Do they change for the same business reasons?"*
->
-> If yes → same Bounded Context. If no → different Bounded Contexts.
-
 | Bounded Context | Aggregates Included | Responsibility | Service Candidate |
 |-----------------|---------------------|----------------|-------------------|
-| *(e.g., Ordering)* | *(Order, Cart)* | *(Manages the lifecycle of customer orders from placement to completion)* | *(order-service)* |
-| *(e.g., Payment)* | *(Payment, Invoice)* | *(Handles all payment processing and financial records)* | *(payment-service)* |
-|                 |                     |                |                   |
-
-> ⚠️ **Key signal for separate contexts:** The same word means different things. E.g., "Product" in the Catalog context means name + description + images, while "Product" in the Order context means item ID + quantity + price. This is **two** Bounded Contexts, not one.
-
-> 💡 **For this assignment:** 2–4 Bounded Contexts is a good target. Each Bounded Context will map to one microservice in your implementation.
+| **Identity & Access** | EmployeeAccount | Xác thực, ủy quyền (JWT), quản lý user | `iam-service` |
+| **Resource** | Resource, Slot | Quản lý danh mục phòng ốc, giữ/nhả sức chứa | `resource-service` |
+| **Event Planning** | Event | Tổ chức, cấu hình và phát hành sự kiện | `event-service` |
+| **Registration** | Registration | Nhận đăng ký, điều phối logic Slot và Payment | `registration-service` |
+| **Payment** | Payment, Refund | Giao tiếp với VNPay/Momo, hoàn tiền, Saga | `payment-service` |
+| **Notification** | Notification | Gửi Email, Push Notification, Calendar | `notification-service` |
+| **Attendance** | QRSession, Attendance | Sinh QR điểm danh, quét QR và xác thực vào/ra | `attendance-service` |
+| **Analytics** | EventMetrics | CQRS Dashboard thống kê đăng ký và điểm danh | `analytics-service` |
 
 ### 2.6 Context Map
 
-Show how Bounded Contexts communicate with each other. This is the architectural "big picture."
+![Context Map](./docs/asset/images/context-map.png)
 
-```mermaid
-graph LR
-    BC1[Context A] -- "relationship" --> BC2[Context B]
-    BC1 -- "relationship" --> BC3[Context C]
-```
-
-> 💡 **How to fill in:** For each pair of Bounded Contexts in 2.5, determine:
-> - **Which one provides data?** → That is Upstream.
-> - **Which one consumes data?** → That is Downstream.
-> - **What is the nature of the dependency?** → Pick a relationship type.
-
-**Common relationship types for this assignment:**
-
-| Type | When to use |
-|------|------------|
-| **Upstream / Downstream** | One context provides data that another consumes |
-| **Customer / Supplier** | Downstream context requests features from upstream |
-| **Anti-Corruption Layer (ACL)** | Downstream translates upstream's model to protect its own model |
-| **Open Host Service (OHS)** | Upstream exposes a well-defined API for any consumer |
-
-| Upstream | Downstream | Relationship Type | Data Exchanged |
-|----------|------------|-------------------|----------------|
-| *(e.g., Ordering)* | *(e.g., Payment)* | *(OHS / Downstream)* | *(Order ID, total amount)* |
-|          |            |                   |                |
+**Mối quan hệ chính:**
+- **IAM (OHS) -> Tất cả Service (CF):** Cung cấp API Authentication chung. Downstream dùng JWT Token làm Published Language.
+- **Registration <-> Payment (Partnership):** Sử dụng **Saga Pattern** để giữ chỗ (Hold Slot), yêu cầu thanh toán (Request Payment), xác nhận nếu thành công (Confirm), hoặc hoàn tác (Rollback/Release Slot) nếu lỗi/timeout.
+- **Analytics (Read Model):** CQRS thuần thụ động, lắng nghe Event (Kafka) từ các service khác (Event, Registration, Attendance, Payment) để update Dashboard mà không làm chậm các luồng Write/Core.
+- **Payment -> External Gateway (ACL):** Sử dụng Anti-Corruption Layer để bảo vệ domain nội bộ khỏi sự thay đổi từ cấu trúc API của Momo.
 
 ### 2.7 Service Composition
 
-Show how the identified services interact to fulfill the original business process from 1.1.
-
-> 💡 **How to do it:** Walk through the business process again. For each step, identify which service handles it and what calls are made between services.
+*(Luồng đăng ký vé có phí - Saga Orchestration/Choreography)*
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant ServiceA as (Bounded Context A) Service
-    participant ServiceB as (Bounded Context B) Service
+    participant E as Employee
+    participant Reg as Registration Service
+    participant Res as Resource Service
+    participant Pay as Payment Service
+    participant VNPay as VNPay Gateway
 
-    Client->>ServiceA: (fill in)
-    ServiceA->>ServiceB: (fill in)
-    ServiceB-->>ServiceA: (fill in)
-    ServiceA-->>Client: (fill in)
+    E->>Reg: POST /registrations (eventId)
+    Reg->>Res: POST /slots/hold (resourceId)
+    alt Slot full
+        Res-->>Reg: 409 Conflict
+        Reg-->>E: 400 Bad Request (Hết chỗ)
+    else Slot available
+        Res-->>Reg: 200 OK (Slot held 15 mins)
+        Reg->>Reg: Save status: PENDING
+        Reg->>Pay: Event: TemporarySlotHeld
+        Pay->>VNPay: Initiate Payment
+        Pay-->>E: Trả về Payment URL
+        
+        E->>VNPay: Thanh toán
+        VNPay-->>Pay: Webhook Callback
+        
+        alt Payment Success
+            Pay->>Reg: Event: PaymentSucceeded
+            Reg->>Reg: Update status: PAID_CONFIRMED
+            Reg->>Res: Event: SlotClaimed (Chốt slot)
+        else Payment Failed / Timeout
+            Pay->>Reg: Event: PaymentFailed
+            Reg->>Reg: Update status: PAID_ROLLED_BACK
+            Reg->>Res: Event: SlotReleased (Nhả slot)
+        end
+    end
 ```
-
-> ⚠️ **Check:** Compare this diagram with your Process Diagram in 1.1. Every step in the business process should be covered by at least one service. If a step is not covered, you may be missing a Bounded Context.
-
----
-
-### Part 2 Summary — How DDD Steps Map to Service Candidates and API Endpoints
-
-The table below answers: *"How does each DDD step connect to the final deliverables — service candidates and API endpoints?"* It also shows the equivalent step in the Step-by-Step Action approach so you can compare how both paths converge.
-
-| DDD Step | Equivalent in Step-by-Step Action | Intermediate Output | What it contributes to |
-|----------|-----------------------------------|---------------------|------------------------|
-| **2.1** Ubiquitous Language | *(no equivalent)* | Shared glossary | Consistent naming across all services and APIs |
-| **2.2** Domain Events (Event Storming) | 2.1–2.2 Decompose & filter actions | Chronological event list | Evidence base for commands and service boundaries |
-| **2.3** Commands + Actors | 2.1 Actions (suitable ✅) | Command list with triggering actors | → **API endpoints** (each command ≈ one endpoint) |
-| **2.4** Aggregates | 2.3 Entity grouping by shared entity | Aggregate table with owned data | → **Service boundaries** (aggregates cluster by context) |
-| **2.5** Bounded Contexts | 2.3 Entity Service + 2.4 Task Service | **→ Service Candidates** *(primary output)* | Each Bounded Context = one service candidate |
-| **2.6** Context Map | 2.8 Service Composition | Upstream/downstream relationships | → Deployment topology and communication patterns |
-| **2.7** Service Composition | 2.8 Service Composition (sequence diagram) | Inter-service sequence | → Architecture diagram in `architecture.md` |
-| **3.1** Contract Design | 3.1 Contract Design | **→ API Endpoints** *(final output)* | OpenAPI specs in `docs/api-specs/` |
-
-**Key insight:** Both approaches converge at the same two deliverables:
-1. **Service Candidates** (from 2.5 Bounded Contexts or 2.3–2.4 Entity/Task services)
-2. **API Endpoints** (from 3.1 Contract Design, traced back to Commands in 2.3 or Capabilities in 2.6)
-
-The difference is *how* you get there: DDD builds service boundaries from *business meaning*, while Step-by-Step Action builds them from *action similarity*. For the same problem, both should produce approximately the same services — DDD boundaries tend to be more stable under business change.
-
----
 
 ## Part 3 — Service-Oriented Design
 
-> Part 3 is the **convergence point** — regardless of whether you used Step-by-Step Action or DDD in Part 2, the outputs here are the same: service contracts and service logic.
-
 ### 3.1 Uniform Contract Design
 
-Service Contract specification for each Bounded Context / service.
-Full OpenAPI specs:
-- [`docs/api-specs/service-a.yaml`](api-specs/service-a.yaml)
-- [`docs/api-specs/service-b.yaml`](api-specs/service-b.yaml)
+*(Tham khảo thêm chi tiết trong `docs/api-specs/`)*
 
-> 💡 **Derive from 2.3 and 2.5:** Each Command from 2.3 typically maps to one API endpoint. The Bounded Context (2.5) determines which service owns the endpoint.
-
-**Service A — *(Bounded Context name)*:**
+**Registration Service:**
 
 | Endpoint | Method | Description | Request Body | Response Codes |
 |----------|--------|-------------|--------------|----------------|
-|          |        |             |              |                |
+| `/api/v1/registrations` | POST | Gửi yêu cầu đăng ký tham gia sự kiện | `{"eventId": "uuid"}` | 201 Created, 400, 409 |
+| `/api/v1/registrations/my` | GET | Lấy danh sách sự kiện đã đăng ký của user | | 200 OK |
+| `/api/v1/registrations/{id}/cancel` | POST | Hủy đăng ký | `{"reason": "string"}` | 200 OK, 404 |
 
-**Service B — *(Bounded Context name)*:**
+**Attendance Service:**
 
 | Endpoint | Method | Description | Request Body | Response Codes |
 |----------|--------|-------------|--------------|----------------|
-|          |        |             |              |                |
-
-> 💡 **Then:** Update the corresponding OpenAPI YAML files in `docs/api-specs/` to match this table. The YAML is the authoritative contract — the table here is a summary.
+| `/api/v1/attendance/qr/display` | POST | Ban tổ chức bật hiển thị mã QR | `{"eventId": "uuid"}` | 201 Created, 403 |
+| `/api/v1/attendance/qr/refresh` | POST | Refresh mã QR để chống cheat | `{"sessionId": "uuid"}` | 200 OK |
+| `/api/v1/attendance/scan` | POST | Nhân viên quét QR để Check-in | `{"qrToken": "string"}` | 200 OK, 400 Invalid/Expired |
 
 ### 3.2 Service Logic Design
 
-Internal processing flow for each service.
-
-> 💡 **How to do it:** For each service, pick its most important endpoint and draw the internal logic. Focus on: input validation → business rule checks → persistence/external calls → response.
-
-**Service A — *(Bounded Context name)*:**
+**Registration Service (Xử lý Đăng ký):**
 
 ```mermaid
 flowchart TD
-    A[Receive Request] --> B{Validate input?}
-    B -->|Valid| C{Business rule check?}
+    A[Receive POST /registrations] --> B{Valid Event ID & Active?}
     B -->|Invalid| D[Return 400 Bad Request]
-    C -->|Pass| E[(Persist / Call downstream)]
-    C -->|Fail| F[Return 409 / 422 Error]
-    E --> G[Return 200/201 Response]
-```
-
-**Service B — *(Bounded Context name)*:**
-
-```mermaid
-flowchart TD
-    A[Receive Request] --> B{Validate input?}
-    B -->|Valid| C{Business rule check?}
-    B -->|Invalid| D[Return 400 Bad Request]
-    C -->|Pass| E[(Persist / Call downstream)]
-    C -->|Fail| F[Return 409 / 422 Error]
-    E --> G[Return 200/201 Response]
+    B -->|Valid| C{Check Ticket Type}
+    C -->|FREE| E[Call Resource Service: Claim Slot]
+    C -->|PAID| F[Call Resource Service: Hold Slot]
+    
+    E --> |Thành công| G[Lưu DB: FREE_CONFIRMED]
+    E --> |Hết chỗ| H[Return 409 Conflict]
+    G --> I[Return 201 Created]
+    
+    F --> |Thành công| J[Lưu DB: PENDING]
+    F --> |Hết chỗ| H
+    J --> K[Publish Event: RegistrationRequested]
+    K --> L[Return 201 Created with Payment info]
 ```
