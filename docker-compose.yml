@@ -24,31 +24,6 @@ services:
     networks:
       - app-network
 
-  # ─── Service A ───────────────────────────────────
-  service-a:
-    build: ./services/service-a
-    ports:
-      - "${SERVICE_A_PORT:-5001}:5000"
-    env_file:
-      - .env
-    networks:
-      - app-network
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-
-  # ─── Service B ───────────────────────────────────
-  service-b:
-    build: ./services/service-b
-    ports:
-      - "${SERVICE_B_PORT:-5002}:5000"
-    env_file:
-      - .env
-    networks:
-      - app-network
-
   # ─── Shared Infrastructure (uncomment as needed) ─
   # db:
   #   image: postgres:16-alpine    # or mysql:8, mongo:7, etc.
