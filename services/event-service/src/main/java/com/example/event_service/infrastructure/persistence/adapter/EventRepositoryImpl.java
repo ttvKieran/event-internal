@@ -1,4 +1,3 @@
-// Đổi dòng package thành thế này (thêm chữ adapter vào cuối)
 package com.example.event_service.infrastructure.persistence.adapter;
 
 import com.example.event_service.domain.model.aggregate.Event;

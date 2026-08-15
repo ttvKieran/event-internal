@@ -1,24 +1,24 @@
-package com.example.event_service.application.command;
+package com.example.event_service.application.dto;
 
 import lombok.Value;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Value
-public class ConfigureEventCommand {
-    UUID eventId;
+public class ConfigureEventDTO {
     String ticketTypeCode;
     Integer maxParticipants;
     BigDecimal price;
+    LocalDateTime registrationOpenAt;
+    LocalDateTime registrationCloseAt;
     List<ResourceItem> resources;
 
     @Value
     public static class ResourceItem {
-        String resourceId;
+        UUID resourceId;
         String note;
-        BigDecimal quantity;
+        Double quantity;
     }
 }
-
-
