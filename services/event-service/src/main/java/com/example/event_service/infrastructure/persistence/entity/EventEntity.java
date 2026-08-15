@@ -28,7 +28,7 @@ public class EventEntity extends BaseEntity {
     private Integer maxParticipants;
     private BigDecimal price;
 
-    // EventSchedule (Bị đập bẹp ra DB)
+    // EventSchedule
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private LocalDateTime registrationStartTime;

@@ -25,7 +25,6 @@ public class Event {
     private EventSchedule schedule;
     private TicketDetail ticketDetails;
     private List<ResourceAllocation> allocatedResources;
-    // Phải để constructor private để cấm khởi tạo tự do bằng từ khóa `new`
     private Event() {}
     public static Event createNew(String title, String description, String location, EventSchedule schedule) {
         Event event = new Event();
@@ -59,4 +58,30 @@ public class Event {
         }
         this.status = EventStatus.CANCELLED;
     }
+    // Khôi phục lại trạng thái của Event từ Database.
+    public static Event reconstitute(
+        UUID eventId,
+        String title,
+        String description,
+        String location,
+        EventStatus status,
+        EventSchedule schedule,
+        TicketDetail ticketDetails,
+        List<ResourceAllocation> allocatedResources,
+        LocalDateTime createdAt) {
+
+        Event event = new Event();
+        event.eventId = eventId;
+        event.title = title;
+        event.description = description;
+        event.location = location;
+        event.status = status;
+        event.schedule = schedule;
+        event.ticketDetails = ticketDetails;
+        event.allocatedResources = allocatedResources != null ? allocatedResources : new ArrayList<>();
+        event.createdAt = createdAt;
+
+        return event;
+    }
+
 }
