@@ -26,7 +26,7 @@ public class EventServiceImpl implements EventUseCase {
 
     @Override
     @Transactional
-    public UUID createEvent(CreateEventDTO dto) {
+    public EventDetailsDTO createEvent(CreateEventDTO dto) {
         EventSchedule schedule = EventSchedule.of(
             dto.getStartTime(), dto.getEndTime(), null, null
         );
@@ -36,12 +36,12 @@ public class EventServiceImpl implements EventUseCase {
         );
 
         Event savedEvent = eventRepository.save(event);
-        return savedEvent.getEventId();
+        return EventDetailsDTO.fromDomain(event);
     }
 
     @Override
     @Transactional
-    public void configureEventDetails(UUID eventId, ConfigureEventDTO dto) {
+    public EventDetailsDTO configureEventDetails(UUID eventId, ConfigureEventDTO dto) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
@@ -61,32 +61,38 @@ public class EventServiceImpl implements EventUseCase {
             }
         }
 
-        event.configureDetails(ticketDetail, resources);
+        event.configureDetails(ticketDetail, resources, dto.getRegistrationOpenAt(), dto.getRegistrationCloseAt());
 
         eventRepository.save(event);
+
+        return EventDetailsDTO.fromDomain(event);
     }
 
 
     @Override
     @Transactional
-    public void publishEvent(UUID eventId) {
+    public EventDetailsDTO publishEvent(UUID eventId) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
         event.publish();
 
         eventRepository.save(event);
+
+        return EventDetailsDTO.fromDomain(event);
     }
 
     @Override
     @Transactional
-    public void cancelEvent(UUID eventId, String reason) {
+    public EventDetailsDTO cancelEvent(UUID eventId, String reason) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
          event.cancel();
 
         eventRepository.save(event);
+
+        return EventDetailsDTO.fromDomain(event);
     }
 
     @Override
@@ -95,16 +101,6 @@ public class EventServiceImpl implements EventUseCase {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
-        return new EventDetailsDTO(
-            event.getEventId(),
-            event.getTitle(),
-            event.getDescription(),
-            event.getStatus().getCode(),
-            event.getTicketDetails() != null ? event.getTicketDetails().getType().getCode() : null,
-            event.getTicketDetails() != null ? event.getTicketDetails().getPrice() : null,
-            event.getSchedule().getStartTime(),
-            event.getSchedule().getEndTime(),
-            event.getLocation()
-        );
+        return EventDetailsDTO.fromDomain(event);
     }
 }

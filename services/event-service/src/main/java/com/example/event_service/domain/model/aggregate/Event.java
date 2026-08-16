@@ -38,12 +38,23 @@ public class Event {
         event.allocatedResources = new ArrayList<>();
         return event;
     }
-    public void configureDetails(TicketDetail ticketDetails, List<ResourceAllocation> resources) {
+    public void configureDetails(
+        TicketDetail ticketDetails,
+        List<ResourceAllocation> resources,
+        LocalDateTime regOpenAt,      // Bổ sung
+        LocalDateTime regCloseAt
+    ) {
         if (!this.status.canTransitionTo(EventStatus.CONFIGURED)) {
             throw new IllegalStateException("Không thể cấu hình ở trạng thái hiện tại: " + this.status.getCode());
         }
         this.ticketDetails = ticketDetails;
         this.allocatedResources = resources != null ? resources : new ArrayList<>();
+        this.schedule = EventSchedule.of(
+            this.schedule.getStartTime(),
+            this.schedule.getEndTime(),
+            regOpenAt,
+            regCloseAt
+        );
         this.status = EventStatus.CONFIGURED;
     }
     public void publish() {
