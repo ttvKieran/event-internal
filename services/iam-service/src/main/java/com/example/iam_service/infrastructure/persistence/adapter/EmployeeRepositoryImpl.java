@@ -36,6 +36,8 @@ public class EmployeeRepositoryImpl implements IEmployeeRepository {
 
     @Override
     public Employee save(Employee employee) {
-        return null;
+        com.example.iam_service.infrastructure.persistence.entity.EmployeeJpaEntity entity = mapper.toEntity(employee);
+        com.example.iam_service.infrastructure.persistence.entity.EmployeeJpaEntity saved = jpaRepository.save(entity);
+        return mapper.toDomain(saved);
     }
 }
