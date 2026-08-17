@@ -3,7 +3,12 @@ package com.example.event_service.application.service;
 import com.example.event_service.application.dto.ConfigureEventDTO;
 import com.example.event_service.application.dto.CreateEventDTO;
 import com.example.event_service.application.dto.EventDetailsDTO;
+import com.example.event_service.application.dto.message.EventCancelledEventPayload;
+import com.example.event_service.application.dto.message.EventCreatedEventPayload;
+import com.example.event_service.application.dto.message.EventDetailsConfiguredEventPayload;
+import com.example.event_service.application.dto.message.EventPublishedEventPayload;
 import com.example.event_service.application.port.in.EventUseCase;
+import com.example.event_service.application.port.out.EventMessagePort;
 import com.example.event_service.domain.model.aggregate.Event;
 import com.example.event_service.domain.model.entity.ResourceAllocation;
 import com.example.event_service.domain.model.valueobject.EventSchedule;
@@ -14,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +29,7 @@ import java.util.UUID;
 public class EventServiceImpl implements EventUseCase {
 
     private final EventRepository eventRepository;
+    private final EventMessagePort eventMessagePort;
 
     @Override
     @Transactional
@@ -36,6 +43,17 @@ public class EventServiceImpl implements EventUseCase {
         );
 
         Event savedEvent = eventRepository.save(event);
+
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        eventMessagePort.sendEventCreatedEvent(
+            EventCreatedEventPayload.builder()
+                .eventId(event.getEventId())
+                .title(event.getTitle())
+                .createdAt(LocalDateTime.now())
+                .build(),
+            correlationId
+        );
+
         return EventDetailsDTO.fromDomain(event);
     }
 
@@ -61,13 +79,38 @@ public class EventServiceImpl implements EventUseCase {
             }
         }
 
+        // Gọi HTTP sang Resource Service để check xem phòng có còn trống trong khung giờ của sự kiện hay không.
+
         event.configureDetails(ticketDetail, resources, dto.getRegistrationOpenAt(), dto.getRegistrationCloseAt());
 
         eventRepository.save(event);
 
+        // Map danh sách tài nguyên sang DTO của Message
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        List<EventDetailsConfiguredEventPayload.ResourceAllocationMessage> resourceMessages = new ArrayList<>();
+        if (event.getAllocatedResources() != null) {
+            event.getAllocatedResources().forEach(res -> {
+                resourceMessages.add(new EventDetailsConfiguredEventPayload.ResourceAllocationMessage(
+                    res.getResourceId(),
+                    res.getQuantity().doubleValue()
+                ));
+            });
+        }
+
+        eventMessagePort.sendEventDetailsConfiguredEvent(
+            EventDetailsConfiguredEventPayload.builder()
+                .eventId(event.getEventId())
+                .ticketType(event.getTicketDetails().getType().getCode())
+                .allocatedResources(resourceMessages)
+                .maxParticipants(event.getTicketDetails().getMaxParticipants())
+                .registrationOpenAt(event.getSchedule().getRegistrationOpenAt())
+                .registrationCloseAt(event.getSchedule().getRegistrationCloseAt())
+                .build(),
+            correlationId
+        );
+
         return EventDetailsDTO.fromDomain(event);
     }
-
 
     @Override
     @Transactional
@@ -78,6 +121,14 @@ public class EventServiceImpl implements EventUseCase {
         event.publish();
 
         eventRepository.save(event);
+
+        // Tạm thời để ngẫu nhiên
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+
+        eventMessagePort.sendEventPublishedEvent(
+            new EventPublishedEventPayload(event.getEventId(), LocalDateTime.now()),
+            correlationId
+        );
 
         return EventDetailsDTO.fromDomain(event);
     }
@@ -91,6 +142,16 @@ public class EventServiceImpl implements EventUseCase {
          event.cancel();
 
         eventRepository.save(event);
+
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        eventMessagePort.sendEventCancelledEvent(
+            EventCancelledEventPayload.builder()
+                .eventId(event.getEventId())
+                .reason(reason)
+                .cancelledAt(LocalDateTime.now())
+                .build(),
+            correlationId
+        );
 
         return EventDetailsDTO.fromDomain(event);
     }

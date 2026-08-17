@@ -4,35 +4,24 @@ info:
   version: 1.0.0
 servers:
   productionBroker:
-    url: broker.events.internal.company.vn:9092
+    url: http://localhost:9092
     protocol: kafka
-    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
-      tương đương).
-  stagingBroker:
-    url: broker.events.staging.company.vn:9092
-    protocol: kafka
+    description: Message Broker
 channels:
   Event:
     description: 'Domain Events của Aggregate `Event`. Publisher — Event Planning
       Service.
-
       Subscribers: Registration (At 20h Policy nghe `EventPublished`), Attendance
-
-      (Event Start/End QR Policy nghe `EventStarted`/`EventEnded`), Notification,
-      Analytics.
-
-      '
+      (Event Start/End QR Policy nghe `EventStarted`/`EventEnded`), Notification, Analytics.'
     publish:
       operationId: emitEventPlanningEvent
-      summary: Event Planning Service phát sự kiện vòng đời sự kiện.
+      summary: Event Service phát sự kiện vòng đời sự kiện.
       message:
         oneOf:
           - $ref: '#/components/messages/EventCreatedEvent'
           - $ref: '#/components/messages/EventDetailsConfiguredEvent'
           - $ref: '#/components/messages/EventPublishedEvent'
           - $ref: '#/components/messages/EventCancelledEvent'
-          - $ref: '#/components/messages/EventStartedEvent'
-          - $ref: '#/components/messages/EventEndedEvent'
 components:
   schemas:
     EventCreatedEventPayload:
@@ -96,24 +85,6 @@ components:
         cancelledAt:
           type: string
           format: date-time
-    EventStartedEventPayload:
-      type: object
-      properties:
-        eventId:
-          type: string
-          format: uuid
-        startedAt:
-          type: string
-          format: date-time
-    EventEndedEventPayload:
-      type: object
-      properties:
-        eventId:
-          type: string
-          format: uuid
-        endedAt:
-          type: string
-          format: date-time
   messages:
     EventCreatedEvent:
       name: EventCreatedEvent
@@ -139,18 +110,6 @@ components:
         - $ref: '#/components/messageTraits/eventTrait'
       payload:
         $ref: '#/components/schemas/EventCancelledEventPayload'
-    EventStartedEvent:
-      name: EventStartedEvent
-      traits:
-        - $ref: '#/components/messageTraits/eventTrait'
-      payload:
-        $ref: '#/components/schemas/EventStartedEventPayload'
-    EventEndedEvent:
-      name: EventEndedEvent
-      traits:
-        - $ref: '#/components/messageTraits/eventTrait'
-      payload:
-        $ref: '#/components/schemas/EventEndedEventPayload'
   messageTraits:
     eventTrait:
       headers:

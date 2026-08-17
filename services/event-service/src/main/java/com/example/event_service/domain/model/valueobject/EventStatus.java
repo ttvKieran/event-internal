@@ -42,6 +42,9 @@ public class EventStatus {
         // Hủy sự kiện (Chỉ được hủy khi chưa bắt đầu)
         if (nextStatus == CANCELLED && (this == DRAFT || this == CONFIGURED || this == PUBLISHED)) return true;
 
+        // Test
+        if (this == PUBLISHED && nextStatus == PUBLISHED) return true;
+
         return false;
     }
 }
