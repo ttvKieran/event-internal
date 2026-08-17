@@ -8,6 +8,29 @@ servers:
   - url: https://api.events.staging.company.vn/v1
     description: Staging
 paths:
+  /Employees:
+    post:
+      tags:
+        - Identity & Access
+      summary: Tạo tài khoản nhân viên mới (Chỉ dành cho ADMIN)
+      description: API tạo tài khoản nhân viên mới. Bắt buộc phải có Role ADMIN mới được phép gọi API này.
+      security: []
+      operationId: createEmployee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeRequest"
+      responses:
+        "200":
+          description: Tạo tài khoản thành công
+        "403":
+          description: Không có quyền ADMIN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/login:
     post:
       tags:
@@ -19,7 +42,7 @@ paths:
         Đây là OHS của IAM: mọi Bounded Context khác Conformist trực tiếp với JWT
         trả về
 
-        (không wrap lại). API Gateway sẽ verify JWT và forward `X-User-Id`, `X-User-Role`.
+        (không wrap lại). API Gateway sẽ verify JWT và forward `X-Employee-Id`, `X-Employee-Role`.
 
         "
       security: []
@@ -48,7 +71,7 @@ paths:
               example:
                 success: false
                 code: BAD_REQUEST
-                message: Dữ liệu đầu vào không hợp lệ (thiếu employeeCode hoặc password).
+                message: Dữ liệu đầu vào không hợp lệ (thiếu EmployeeCode hoặc password).
                 data: null
                 timestamp: "2026-08-13T08:00:00.000Z"
                 path: /v1/auth/login
@@ -93,10 +116,10 @@ paths:
     get:
       tags:
         - Identity & Access
-      summary: Lấy thông tin user hiện tại (Dành cho Frontend)
+      summary: Lấy thông tin Employee hiện tại (Dành cho Frontend)
       responses:
         "200":
-          description: Thông tin user
+          description: Thông tin Employee
           content:
             application/json:
               schema:
@@ -109,6 +132,34 @@ paths:
           description: OK
 components:
   schemas:
+    CreateEmployeeRequest:
+      type: object
+      required:
+        - fullname
+        - email
+        - employeeCode
+        - password
+        - roleId
+        - departmentId
+      properties:
+        fullname:
+          type: string
+          example: Nguyen Van A
+        email:
+          type: string
+          example: a.nguyen@company.vn
+        EmployeeCode:
+          type: string
+          example: EMP00124
+        password:
+          type: string
+          example: password123
+        roleId:
+          type: string
+          format: uuid
+        departmentId:
+          type: string
+          format: uuid
     ProfileApiResponse:
       type: object
       properties:
