@@ -7,6 +7,7 @@ import com.example.event_service.presentation.dto.request.ConfigureEventDetailsR
 import com.example.event_service.presentation.dto.request.CreateEventRequestDTO;
 import com.example.event_service.presentation.dto.response.EventResponseDTO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
@@ -16,5 +17,7 @@ public interface EventApiMapper {
 
     EventResponseDTO toResponseDto(EventDetailsDTO appResult);
 
+    @Mapping(target = "ticketTypeCode", source = "ticketType")
+    @Mapping(target = "resources", source = "allocatedResources")
     ConfigureEventDTO toAppDto(ConfigureEventDetailsRequestDTO request);
 }

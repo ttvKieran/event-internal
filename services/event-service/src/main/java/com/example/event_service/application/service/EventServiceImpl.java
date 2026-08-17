@@ -3,7 +3,12 @@ package com.example.event_service.application.service;
 import com.example.event_service.application.dto.ConfigureEventDTO;
 import com.example.event_service.application.dto.CreateEventDTO;
 import com.example.event_service.application.dto.EventDetailsDTO;
+import com.example.event_service.application.dto.message.EventCancelledEventPayload;
+import com.example.event_service.application.dto.message.EventCreatedEventPayload;
+import com.example.event_service.application.dto.message.EventDetailsConfiguredEventPayload;
+import com.example.event_service.application.dto.message.EventPublishedEventPayload;
 import com.example.event_service.application.port.in.EventUseCase;
+import com.example.event_service.application.port.out.EventMessagePort;
 import com.example.event_service.domain.model.aggregate.Event;
 import com.example.event_service.domain.model.entity.ResourceAllocation;
 import com.example.event_service.domain.model.valueobject.EventSchedule;
@@ -14,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -23,10 +29,11 @@ import java.util.UUID;
 public class EventServiceImpl implements EventUseCase {
 
     private final EventRepository eventRepository;
+    private final EventMessagePort eventMessagePort;
 
     @Override
     @Transactional
-    public UUID createEvent(CreateEventDTO dto) {
+    public EventDetailsDTO createEvent(CreateEventDTO dto) {
         EventSchedule schedule = EventSchedule.of(
             dto.getStartTime(), dto.getEndTime(), null, null
         );
@@ -36,12 +43,23 @@ public class EventServiceImpl implements EventUseCase {
         );
 
         Event savedEvent = eventRepository.save(event);
-        return savedEvent.getEventId();
+
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        eventMessagePort.sendEventCreatedEvent(
+            EventCreatedEventPayload.builder()
+                .eventId(event.getEventId())
+                .title(event.getTitle())
+                .createdAt(LocalDateTime.now())
+                .build(),
+            correlationId
+        );
+
+        return EventDetailsDTO.fromDomain(event);
     }
 
     @Override
     @Transactional
-    public void configureEventDetails(UUID eventId, ConfigureEventDTO dto) {
+    public EventDetailsDTO configureEventDetails(UUID eventId, ConfigureEventDTO dto) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
@@ -61,32 +79,81 @@ public class EventServiceImpl implements EventUseCase {
             }
         }
 
-        event.configureDetails(ticketDetail, resources);
+        // Gọi HTTP sang Resource Service để check xem phòng có còn trống trong khung giờ của sự kiện hay không.
+
+        event.configureDetails(ticketDetail, resources, dto.getRegistrationOpenAt(), dto.getRegistrationCloseAt());
 
         eventRepository.save(event);
-    }
 
+        // Map danh sách tài nguyên sang DTO của Message
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        List<EventDetailsConfiguredEventPayload.ResourceAllocationMessage> resourceMessages = new ArrayList<>();
+        if (event.getAllocatedResources() != null) {
+            event.getAllocatedResources().forEach(res -> {
+                resourceMessages.add(new EventDetailsConfiguredEventPayload.ResourceAllocationMessage(
+                    res.getResourceId(),
+                    res.getQuantity().doubleValue()
+                ));
+            });
+        }
+
+        eventMessagePort.sendEventDetailsConfiguredEvent(
+            EventDetailsConfiguredEventPayload.builder()
+                .eventId(event.getEventId())
+                .ticketType(event.getTicketDetails().getType().getCode())
+                .allocatedResources(resourceMessages)
+                .maxParticipants(event.getTicketDetails().getMaxParticipants())
+                .registrationOpenAt(event.getSchedule().getRegistrationOpenAt())
+                .registrationCloseAt(event.getSchedule().getRegistrationCloseAt())
+                .build(),
+            correlationId
+        );
+
+        return EventDetailsDTO.fromDomain(event);
+    }
 
     @Override
     @Transactional
-    public void publishEvent(UUID eventId) {
+    public EventDetailsDTO publishEvent(UUID eventId) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
         event.publish();
 
         eventRepository.save(event);
+
+        // Tạm thời để ngẫu nhiên
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+
+        eventMessagePort.sendEventPublishedEvent(
+            new EventPublishedEventPayload(event.getEventId(), LocalDateTime.now()),
+            correlationId
+        );
+
+        return EventDetailsDTO.fromDomain(event);
     }
 
     @Override
     @Transactional
-    public void cancelEvent(UUID eventId, String reason) {
+    public EventDetailsDTO cancelEvent(UUID eventId, String reason) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
          event.cancel();
 
         eventRepository.save(event);
+
+        String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        eventMessagePort.sendEventCancelledEvent(
+            EventCancelledEventPayload.builder()
+                .eventId(event.getEventId())
+                .reason(reason)
+                .cancelledAt(LocalDateTime.now())
+                .build(),
+            correlationId
+        );
+
+        return EventDetailsDTO.fromDomain(event);
     }
 
     @Override
@@ -95,16 +162,6 @@ public class EventServiceImpl implements EventUseCase {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
-        return new EventDetailsDTO(
-            event.getEventId(),
-            event.getTitle(),
-            event.getDescription(),
-            event.getStatus().getCode(),
-            event.getTicketDetails() != null ? event.getTicketDetails().getType().getCode() : null,
-            event.getTicketDetails() != null ? event.getTicketDetails().getPrice() : null,
-            event.getSchedule().getStartTime(),
-            event.getSchedule().getEndTime(),
-            event.getLocation()
-        );
+        return EventDetailsDTO.fromDomain(event);
     }
 }

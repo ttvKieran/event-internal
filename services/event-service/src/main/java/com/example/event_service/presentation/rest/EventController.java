@@ -26,9 +26,9 @@ public class EventController {
 
     // Tạo sự kiện
     @PostMapping
-    public ResponseEntity<ApiResponse<UUID>> createEvent(@RequestBody CreateEventRequestDTO request) {
-        UUID eventId = eventUseCase.createEvent(mapper.toAppDto(request));
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(eventId));
+    public ResponseEntity<ApiResponse<EventResponseDTO>> createEvent(@RequestBody CreateEventRequestDTO request) {
+        EventDetailsDTO appResult = eventUseCase.createEvent(mapper.toAppDto(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(mapper.toResponseDto(appResult)));
     }
 
     // Lấy chi tiết sự kiện
@@ -43,31 +43,31 @@ public class EventController {
 
     // Cấu hình sự kiện
     @PutMapping("/{eventId}/details")
-    public ResponseEntity<ApiResponse<Void>> configureEventDetails(
+    public ResponseEntity<ApiResponse<EventResponseDTO>> configureEventDetails(
         @PathVariable UUID eventId,
         @RequestBody ConfigureEventDetailsRequestDTO request) {
 
-        eventUseCase.configureEventDetails(eventId, mapper.toAppDto(request));
+        EventDetailsDTO appResult =  eventUseCase.configureEventDetails(eventId, mapper.toAppDto(request));
 
-        return ResponseEntity.ok(ApiResponse.ok(null));
+        return ResponseEntity.ok(ApiResponse.ok(mapper.toResponseDto(appResult)));
     }
 
     // Công bố sự kiện
     @PostMapping("/{eventId}/publish")
-    public ResponseEntity<ApiResponse<Void>> publishEvent(@PathVariable UUID eventId) {
-        eventUseCase.publishEvent(eventId);
-        return ResponseEntity.ok(ApiResponse.ok(null));
+    public ResponseEntity<ApiResponse<EventResponseDTO>> publishEvent(@PathVariable UUID eventId) {
+        EventDetailsDTO appResult = eventUseCase.publishEvent(eventId);
+        return ResponseEntity.ok(ApiResponse.ok(mapper.toResponseDto(appResult)));
     }
 
     // Hủy sự kiện
     @PostMapping("/{eventId}/cancel")
-    public ResponseEntity<ApiResponse<Void>> cancelEvent(
+    public ResponseEntity<ApiResponse<EventResponseDTO>> cancelEvent(
         @PathVariable UUID eventId,
         @RequestBody Map<String, String> request) {
 
         String reason = request.get("reason");
-        eventUseCase.cancelEvent(eventId, reason);
+        EventDetailsDTO appResult = eventUseCase.cancelEvent(eventId, reason);
 
-        return ResponseEntity.ok(ApiResponse.ok(null));
+        return ResponseEntity.ok(ApiResponse.ok(mapper.toResponseDto(appResult)));
     }
 }

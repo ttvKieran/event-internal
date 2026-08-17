@@ -26,7 +26,7 @@ services:
 
   # ─── Shared Infrastructure ───────────────────────
   event-db:
-    image: postgres:16-alpine
+    image: quay.io/debezium/postgres:16
     ports:
       - "${EVENT_DB_PORT:-5432}:5432"
     environment:
@@ -61,6 +61,59 @@ services:
       - zookeeper
     networks:
       - app-network
+
+  debezium:
+    image: quay.io/debezium/connect:2.5
+    ports:
+      - "${DEBEZIUM_PORT:-8083}:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
+      GROUP_ID: ${DEBEZIUM_GROUP_ID:-1}
+
+      CONFIG_STORAGE_TOPIC: ${DEBEZIUM_CONFIG_TOPIC:-my_connect_configs}
+      OFFSET_STORAGE_TOPIC: ${DEBEZIUM_OFFSET_TOPIC:-my_connect_offsets}
+      STATUS_STORAGE_TOPIC: ${DEBEZIUM_STATUS_TOPIC:-my_connect_statuses}
+    depends_on:
+      - kafka
+      - event-db
+    networks:
+      - app-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "${KAFKA_UI_PORT:-8080}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ${KAFKA_CLUSTER_NAME:-local}
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
+    depends_on:
+      - kafka
+    networks:
+      - app-network
+
+  debezium-init:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-event_db}
+      - DB_HOST=event-db
+      - EVENT_DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=event-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Event
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-connector.sh" ]
+    depends_on:
+      - debezium
+    restart: "no"
+    networks:
+      - app-network
+
 
 networks:
   app-network:

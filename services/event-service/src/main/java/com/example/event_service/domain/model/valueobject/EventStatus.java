@@ -34,12 +34,16 @@ public class EventStatus {
     // State Machine
     public boolean canTransitionTo(EventStatus nextStatus) {
         if (this == DRAFT && nextStatus == CONFIGURED) return true; // Nháp -> Đã cấu hình
+        if (this == CONFIGURED && nextStatus == CONFIGURED) return true; // Sửa cấu hình
         if (this == CONFIGURED && nextStatus == PUBLISHED) return true; // Cấu hình -> Công bố
         if (this == PUBLISHED && nextStatus == STARTED) return true; // Công bố -> Bắt đầu diễn ra
         if (this == STARTED && nextStatus == ENDED) return true; // Đang diễn ra -> Kết thúc
 
         // Hủy sự kiện (Chỉ được hủy khi chưa bắt đầu)
         if (nextStatus == CANCELLED && (this == DRAFT || this == CONFIGURED || this == PUBLISHED)) return true;
+
+        // Test
+        if (this == PUBLISHED && nextStatus == PUBLISHED) return true;
 
         return false;
     }

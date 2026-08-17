@@ -7,13 +7,13 @@ import com.example.event_service.application.dto.EventDetailsDTO;
 import java.util.UUID;
 
 public interface EventUseCase {
-    UUID createEvent(CreateEventDTO dto);
+    EventDetailsDTO createEvent(CreateEventDTO dto);
 
-    void configureEventDetails(UUID eventId, ConfigureEventDTO dto);
+    EventDetailsDTO configureEventDetails(UUID eventId, ConfigureEventDTO dto);
 
-    void publishEvent(UUID eventId);
+    EventDetailsDTO publishEvent(UUID eventId);
 
-    void cancelEvent(UUID eventId, String reason);
+    EventDetailsDTO cancelEvent(UUID eventId, String reason);
 
     EventDetailsDTO getEventDetails(UUID eventId);
 }
