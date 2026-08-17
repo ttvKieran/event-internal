@@ -11,7 +11,7 @@ import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
-    @Value("$KKXwgw3Bv5N40ydnStoTNu85jRbILqKaEPQtTcGC79Q=")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     private final long ACCESS_TOKEN_EXPIRATION = 3600000;

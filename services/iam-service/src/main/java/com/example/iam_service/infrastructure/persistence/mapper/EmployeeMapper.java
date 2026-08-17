@@ -28,7 +28,7 @@ public class EmployeeMapper {
         }
 
         return Employee.builder()
-                .id(entity.getId().toString())
+                .id(entity.getId() != null ? entity.getId().toString() : null)
                 .fullname(entity.getFullname())
                 .email(entity.getEmail())
                 .employeeCode(entity.getEmployeeCode())
@@ -38,5 +38,34 @@ public class EmployeeMapper {
                 .role(roleDomain)
                 .department(departmentDomain)
                 .build();
+    }
+
+    public EmployeeJpaEntity toEntity(Employee domain) {
+        if (domain == null) return null;
+
+        EmployeeJpaEntity entity = new EmployeeJpaEntity();
+        if (domain.getId() != null && !domain.getId().isEmpty()) {
+            entity.setId(java.util.UUID.fromString(domain.getId()));
+        }
+        entity.setFullname(domain.getFullname());
+        entity.setEmail(domain.getEmail());
+        entity.setEmployeeCode(domain.getEmployeeCode());
+        entity.setPassword(domain.getPassword());
+        entity.setStatus(domain.getStatus());
+        entity.setRefreshToken(domain.getRefreshToken());
+
+        if (domain.getRole() != null && domain.getRole().getId() != null) {
+            com.example.iam_service.infrastructure.persistence.entity.RoleJpaEntity roleEntity = new com.example.iam_service.infrastructure.persistence.entity.RoleJpaEntity();
+            roleEntity.setId(java.util.UUID.fromString(domain.getRole().getId()));
+            entity.setRole(roleEntity);
+        }
+
+        if (domain.getDepartment() != null && domain.getDepartment().getId() != null) {
+            com.example.iam_service.infrastructure.persistence.entity.DepartmentJpaEntity deptEntity = new com.example.iam_service.infrastructure.persistence.entity.DepartmentJpaEntity();
+            deptEntity.setId(java.util.UUID.fromString(domain.getDepartment().getId()));
+            entity.setDepartment(deptEntity);
+        }
+
+        return entity;
     }
 }
