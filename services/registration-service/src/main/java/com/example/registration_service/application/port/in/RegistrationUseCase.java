@@ -16,4 +16,5 @@ public interface RegistrationUseCase {
     void closeRegistration(UUID campaignId);
     Registration getRegistrationById(UUID registrationId);
     List<Registration> getRegistrations(UUID campaignId, UUID userId, RegistrationStatus status);
+    int countActiveRegistrations(UUID campaignId);
 }

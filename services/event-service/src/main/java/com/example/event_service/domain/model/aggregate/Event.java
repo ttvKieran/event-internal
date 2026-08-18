@@ -69,6 +69,12 @@ public class Event {
         }
         this.status = EventStatus.CANCELLED;
     }
+    public void pendingCancellation() {
+        if (!this.status.canTransitionTo(EventStatus.PENDING_CANCELLATION)) {
+            throw new IllegalStateException("Không thể chuyển sang chờ hủy lúc này");
+        }
+        this.status = EventStatus.PENDING_CANCELLATION;
+    }
     // Khôi phục lại trạng thái của Event từ Database.
     public static Event reconstitute(
         UUID eventId,

@@ -22,4 +22,11 @@ public interface JpaRegistrationRepository extends JpaRepository<RegistrationEnt
         @Param("userId") UUID userId,
         @Param("status") String status
     );
+
+    @Query("SELECT COUNT(r) FROM RegistrationEntity r WHERE r.campaignId = :campaignId AND r.status IN :statuses")
+    long countByCampaignIdAndStatusIn(
+        @Param("campaignId") UUID campaignId,
+        @Param("statuses") java.util.List<String> statuses
+    );
+
 }

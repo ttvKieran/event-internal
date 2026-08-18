@@ -160,6 +160,34 @@ paths:
                 $ref: "#/components/schemas/RegistrationApiResponse"
         "404":
           $ref: "#/components/responses/NotFound"
+  /campaigns/{campaignId}/stats:
+    get:
+      tags:
+        - Registration
+      summary: Lấy thống kê số lượng vé (Sử dụng Nội bộ)
+      description: |
+        API nội bộ phục vụ giao tiếp RPI (Đồng bộ) giữa các Service. 
+        Được gọi bởi Event Service (thông qua Feign Client) để đếm số lượng vé đã bán hoặc đang giữ chỗ trước khi cho phép Hủy sự kiện. 
+        Nếu tổng số > 0, sự kiện không được Hủy ngay mà phải chuyển sang PENDING_CANCELLATION.
+      operationId: getCampaignStats
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Trả về trực tiếp object chứa số lượng vé (Không bọc trong ApiResponse wrapper)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paidCount:
+                    type: integer
+                    example: 5
   /health:
     get:
       summary: Health check

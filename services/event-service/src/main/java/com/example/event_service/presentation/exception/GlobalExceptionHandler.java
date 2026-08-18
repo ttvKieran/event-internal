@@ -28,6 +28,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    //IllegalStateException
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalStateException(IllegalStateException ex, HttpServletRequest request) {
+        log.warn("Business Logic Conflict - Path: {}, Message: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponseDTO error = ErrorResponseDTO.builder()
+            .code(ApiErrorCode.BAD_REQUEST.getCode())
+
+            .message(ex.getMessage())
+
+            .path(request.getRequestURI())
+            .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     // Bắt toàn bộ các Exception không lường trước được (tránh crash hoặc lộ stacktrace)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleGlobalException(Exception ex, HttpServletRequest request) {

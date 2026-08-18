@@ -11,4 +11,5 @@ public interface RegistrationRepository {
     Optional<Registration> findById(UUID registrationId);
     void save(Registration registration);
     List<Registration> findByFilters(UUID campaignId, UUID userId, RegistrationStatus status);
+    int countActiveRegistrations(UUID campaignId);
 }
