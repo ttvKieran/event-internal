@@ -17,19 +17,11 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public Claims validateToken(String token) {
+    public Claims validateAndGetClaims(String token) {
         return Jwts.parser()
             .verifyWith(getSigningKey())
             .build()
             .parseSignedClaims(token)
             .getPayload();
-    }
-
-    public String extractEmployeeId(String token) {
-        return validateToken(token).getSubject();
-    }
-
-    public String extractEmployeeRole(String token) {
-        return validateToken(token).get("role", String.class);
     }
 }
