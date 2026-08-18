@@ -6,6 +6,7 @@ import com.example.registration_service.domain.model.valueobject.RegistrationSta
 import com.example.registration_service.presentation.dto.request.CancelRegistrationRequest;
 import com.example.registration_service.presentation.dto.request.ReserveTicketRequest;
 import com.example.registration_service.presentation.dto.response.ApiResponse;
+import com.example.registration_service.presentation.dto.response.CampaignStatsResponse;
 import com.example.registration_service.presentation.dto.response.RegistrationResponse;
 import com.example.registration_service.presentation.dto.response.ReserveTicketResponse;
 import com.example.registration_service.presentation.mapper.RegistrationApiMapper;
@@ -109,5 +110,11 @@ public class RegistrationController {
             reg.getRegisteredAt()
         );
         return ResponseEntity.ok(ApiResponse.ok(response, "Đăng ký đã được hủy thành công và hoàn trả slot vé."));
+    }
+
+    @GetMapping("/campaigns/{campaignId}/stats")
+    public ResponseEntity<CampaignStatsResponse> getCampaignStats(@PathVariable UUID campaignId) {
+        int activeTickets = registrationUseCase.countActiveRegistrations(campaignId);
+        return ResponseEntity.ok(new CampaignStatsResponse(activeTickets));
     }
 }

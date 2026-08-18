@@ -12,9 +12,12 @@ import com.example.event_service.application.port.out.EventMessagePort;
 import com.example.event_service.domain.model.aggregate.Event;
 import com.example.event_service.domain.model.entity.ResourceAllocation;
 import com.example.event_service.domain.model.valueobject.EventSchedule;
+import com.example.event_service.domain.model.valueobject.EventStatus;
 import com.example.event_service.domain.model.valueobject.TicketDetail;
 import com.example.event_service.domain.model.valueobject.TicketType;
 import com.example.event_service.domain.repository.EventRepository;
+import com.example.event_service.infrastructure.client.RegistrationClient;
+import com.example.event_service.infrastructure.client.dto.CampaignStatsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ public class EventServiceImpl implements EventUseCase {
 
     private final EventRepository eventRepository;
     private final EventMessagePort eventMessagePort;
+    private final RegistrationClient registrationClient;
 
     @Override
     @Transactional
@@ -134,13 +138,23 @@ public class EventServiceImpl implements EventUseCase {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = IllegalStateException.class)
     public EventDetailsDTO cancelEvent(UUID eventId, String reason) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
-         event.cancel();
+        // Gọi RPI sang Registration service
+        CampaignStatsResponse stats = registrationClient.getStats(eventId.toString());
+        if (stats.getPaidCount() == -1) {
+            throw new IllegalStateException("Hệ thống kiểm tra vé đang bảo trì, không thể hủy sự kiện lúc này!");
+        }
+        if (stats.getPaidCount() > 0) {
+            event.pendingCancellation();
+            eventRepository.save(event);
+            throw new IllegalStateException("Sự kiện đã bán vé! Đã chuyển sang trạng thái chờ xử lý hoàn tiền.");
+        }
 
+        event.cancel();
         eventRepository.save(event);
 
         String correlationId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);

@@ -99,4 +99,9 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
     public List<Registration> getRegistrations(UUID campaignId, UUID userId, RegistrationStatus status) {
         return registrationRepo.findByFilters(campaignId, userId, status);
     }
+
+    @Override
+    public int countActiveRegistrations(UUID campaignId) {
+        return registrationRepo.countActiveRegistrations(campaignId);
+    }
 }

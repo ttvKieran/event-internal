@@ -41,4 +41,14 @@ public class RegistrationRepositoryAdapter implements RegistrationRepository {
             .map(mapper::toDomain)
             .toList();
     }
+
+    @Override
+    public int countActiveRegistrations(UUID campaignId) {
+        List<String> activeStatuses = List.of(
+            RegistrationStatus.CONFIRMED.getCode(),
+            RegistrationStatus.RESERVED.getCode()
+        );
+        long count = jpaRepository.countByCampaignIdAndStatusIn(campaignId, activeStatuses);
+        return (int) count;
+    }
 }
