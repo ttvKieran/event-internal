@@ -6,6 +6,8 @@ import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.domain.model.Role;
 import com.example.iam_service.domain.repository.IEmployeeRepository;
 import com.example.iam_service.presentation.dto.CreateEmployeeRequest;
+import com.example.iam_service.presentation.dto.UpdateEmployeeRequest;
+import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +31,11 @@ public class EmployeeService implements EmployeeUseCase {
             throw new RuntimeException("Employee code already exists");
         }
 
+        Optional<Employee> existingEmail = employeeRepository.findByEmail(request.getEmail());
+        if (existingEmail.isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
         Role role = Role.builder().id(request.getRoleId()).build();
         Department department = Department.builder().id(request.getDepartmentId()).build();
 
@@ -43,5 +50,56 @@ public class EmployeeService implements EmployeeUseCase {
                 .build();
 
         return employeeRepository.save(employee);
+    }
+
+    @Override
+    @Transactional
+    public void updateEmployee(UpdateEmployeeRequest request) {
+        Employee employee = employeeRepository.findByEmployeeCode(request.getEmployeeCode())
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        if (!employee.getEmail().equals(request.getEmail())) {
+            Optional<Employee> emailOwner = employeeRepository.findByEmail(request.getEmail());
+            if (emailOwner.isPresent()) {
+                throw new RuntimeException("Email already exist");
+            }
+        }
+
+        String passwordToUpdate = employee.getPassword();
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            passwordToUpdate = passwordEncoder.encode(request.getPassword());
+        }
+
+        employee.updateEmployee(request.getFullname(), request.getEmail(), passwordToUpdate);
+
+        employeeRepository.save(employee);
+    }
+
+    @Override
+    @Transactional
+    public void lockEmployee(String employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        if (!employee.isActive()) {
+            return;
+        }
+
+        employee.lockEmployee();
+        employeeRepository.save(employee);
+    }
+
+    @Override
+    @Transactional
+    public void unlockEmployee(String employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        if (employee.isActive()) {
+            return;
+        }
+
+        employee.unlockEmployee();
+        employeeRepository.save(employee);
     }
 }

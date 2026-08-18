@@ -5,6 +5,7 @@ import java.util.Optional;
 
 public interface IEmployeeRepository {
     Optional<Employee> findByEmployeeCode(String employeeCode);
+    Optional<Employee> findByEmail(String email);
     Optional<Employee> findById(String id);
     Optional<Employee> findByRefreshToken(String refreshToken);
     Employee save(Employee employee);

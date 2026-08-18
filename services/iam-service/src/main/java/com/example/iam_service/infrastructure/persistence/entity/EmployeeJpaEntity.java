@@ -11,8 +11,10 @@ public class EmployeeJpaEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private String fullname;
+    @Column(unique = true, nullable = false)
     private String employeeCode;
+
+    private String fullname;
     private String email;
     private String password;
     private String status;

@@ -35,4 +35,58 @@ public class EmployeeController {
             ));
         }
     }
+
+    @PutMapping("/{employeeCode}")
+    @PreAuthorize("hasAuthority('ADMIN') or #employeeCode == authentication.principal.employeeCode")
+    public ResponseEntity<?> updateEmployee(
+            @PathVariable("employeeCode") String employeeCode,
+            @RequestBody com.example.iam_service.presentation.dto.UpdateEmployeeRequest request) {
+        try {
+            request.setEmployeeCode(employeeCode);
+            employeeUseCase.updateEmployee(request);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Update information successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/{id}/lock")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<?> lockEmployee(@PathVariable("id") String id) {
+        try {
+            employeeUseCase.lockEmployee(id);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Account has been locked"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/{id}/unlock")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<?> unlockEmployee(@PathVariable("id") String id) {
+        try {
+            employeeUseCase.unlockEmployee(id);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Restore account successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }

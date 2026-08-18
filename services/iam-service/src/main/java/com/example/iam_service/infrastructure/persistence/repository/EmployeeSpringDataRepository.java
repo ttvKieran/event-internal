@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface EmployeeSpringDataRepository extends JpaRepository<EmployeeJpaEntity, UUID> {
     Optional<EmployeeJpaEntity> findByEmployeeCode(String employeeCode);
+    Optional<EmployeeJpaEntity> findByEmail(String email);
     Optional<EmployeeJpaEntity> findByRefreshToken(String refreshToken);
 }
