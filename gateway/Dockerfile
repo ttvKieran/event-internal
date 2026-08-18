@@ -1,8 +1,12 @@
-# API Gateway — Dockerfile
-# Replace with your actual setup.
-# See .ai/prompts/create-dockerfile.md for templates (Node.js, Python, Go, Nginx).
-#
-# Requirements: expose port 8000, route to backend services.
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# TODO: Replace with your actual Dockerfile.
-FROM scratch
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

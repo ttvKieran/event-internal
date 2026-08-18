@@ -13,18 +13,53 @@ services:
 #    networks:
 #      - app-network
 #
-#  # ─── API Gateway ─────────────────────────────────
-#  gateway:
-#    build: ./gateway
-#    ports:
-#      - "${GATEWAY_PORT:-8080}:8000"
-#    depends_on:
-#      - service-a
-#      - service-b
-#    networks:
-#      - app-network
+  # ─── API Gateway ─────────────────────────────────
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      - iam-service
+    environment:
+      - IAM_SERVICE_URL=http://iam-service:8085
+      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
+    networks:
+      - app-network
 
-  # ─── Shared Infrastructure ───────────────────────
+  # ─── IAM Service ─────────────────────────────────
+  iam-service:
+    build: ./services/iam-service
+    container_name: iam-service
+    ports:
+      - "${IAM_SERVICE_PORT:-8085}:8085"
+    depends_on:
+      - iam-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iam-db:5432/${IAM_DB_NAME:-employee_db}
+      - DB_USERNAME=${IAM_DB_USER:-postgres}
+      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
+      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
+      - SPRING_SQL_INIT_MODE=always
+    networks:
+      - app-network
+
+  # ─── Database for IAM ────────────────────────────
+  iam-db:
+    image: postgres:16-alpine
+    container_name: iam-db
+    ports:
+      - "${IAM_DB_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
+      POSTGRES_USER: ${IAM_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${IAM_DB_PASSWORD:-postgres}
+    volumes:
+      - iam-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # ─── Shared Infrastructure (Event DB) ────────────
   event-db:
     image: quay.io/debezium/postgres:16
     ports:
@@ -133,5 +168,6 @@ networks:
 
 volumes:
   event-db-data:
+  iam-db-data:
   registration_db_data:
 

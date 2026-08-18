@@ -20,4 +20,18 @@ public class Employee {
     public boolean isActive() {
         return "ACTIVE".equals(this.status);
     }
+
+    public void updateEmployee(String fullname, String email, String password) {
+        this.fullname = fullname;
+        this.email = email;
+        this.password = password;
+    }
+
+    public void lockEmployee() {
+        this.status = "INACTIVE";
+    }
+
+    public void unlockEmployee() {
+        this.status = "ACTIVE";
+    }
 }

@@ -25,6 +25,11 @@ public class EmployeeRepositoryImpl implements IEmployeeRepository {
     }
 
     @Override
+    public Optional<Employee> findByEmail(String email) {
+        return jpaRepository.findByEmail(email).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Employee> findById(String id) {
         return jpaRepository.findById(UUID.fromString(id)).map(mapper::toDomain);
     }
