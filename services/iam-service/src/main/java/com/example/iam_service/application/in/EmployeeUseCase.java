@@ -6,7 +6,7 @@ import com.example.iam_service.presentation.dto.UpdateEmployeeRequest;
 
 public interface EmployeeUseCase {
     Employee createEmployee(CreateEmployeeRequest request);
-    void updateEmployee(UpdateEmployeeRequest request);
+    void updateEmployee(String employeeCode, UpdateEmployeeRequest request);
     void lockEmployee(String employeeId);
     void unlockEmployee(String employeeId);
 }

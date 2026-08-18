@@ -36,14 +36,13 @@ public class EmployeeController {
         }
     }
 
-    @PutMapping("/{employeeCode}")
+    @PatchMapping("/{employeeCode}")
     @PreAuthorize("hasAuthority('ADMIN') or #employeeCode == authentication.principal.employeeCode")
     public ResponseEntity<?> updateEmployee(
             @PathVariable("employeeCode") String employeeCode,
             @RequestBody com.example.iam_service.presentation.dto.UpdateEmployeeRequest request) {
         try {
-            request.setEmployeeCode(employeeCode);
-            employeeUseCase.updateEmployee(request);
+            employeeUseCase.updateEmployee(employeeCode, request);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Update information successfully"
