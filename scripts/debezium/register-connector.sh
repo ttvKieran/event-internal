@@ -51,7 +51,7 @@ JSON_PAYLOAD=$(cat <<EOF
     "transforms.outbox.table.field.event.type": "type",
     "key.converter.schemas.enable": "false",
         "value.converter.schemas.enable": "false",
-        "transforms.outbox.table.fields.additional.placement": "id:header:messageId, correlation_id:header:correlationId, created_at:header:timestamp"
+        "transforms.outbox.table.fields.additional.placement": "type:header:eventType, id:header:messageId, correlation_id:header:correlationId, created_at:header:timestamp"
   }
 }
 EOF

@@ -38,6 +38,19 @@ services:
     networks:
       - app-network
 
+  registration-db:
+    image: quay.io/debezium/postgres:16
+    ports:
+      - "${REGISTRATION_DB_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${REGISTRATION_DB_NAME:-registration_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - registration_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
@@ -114,10 +127,11 @@ services:
     networks:
       - app-network
 
-
 networks:
   app-network:
     driver: bridge
 
 volumes:
   event-db-data:
+  registration_db_data:
+

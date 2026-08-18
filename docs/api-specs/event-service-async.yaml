@@ -9,19 +9,20 @@ servers:
     description: Message Broker
 channels:
   Event:
-    description: 'Domain Events của Aggregate `Event`. Publisher — Event Planning
+    description:
+      "Domain Events của Aggregate `Event`. Publisher — Event Planning
       Service.
       Subscribers: Registration (At 20h Policy nghe `EventPublished`), Attendance
-      (Event Start/End QR Policy nghe `EventStarted`/`EventEnded`), Notification, Analytics.'
+      (Event Start/End QR Policy nghe `EventStarted`/`EventEnded`), Notification, Analytics."
     publish:
       operationId: emitEventPlanningEvent
       summary: Event Service phát sự kiện vòng đời sự kiện.
       message:
         oneOf:
-          - $ref: '#/components/messages/EventCreatedEvent'
-          - $ref: '#/components/messages/EventDetailsConfiguredEvent'
-          - $ref: '#/components/messages/EventPublishedEvent'
-          - $ref: '#/components/messages/EventCancelledEvent'
+          - $ref: "#/components/messages/EventCreatedEvent"
+          - $ref: "#/components/messages/EventDetailsConfiguredEvent"
+          - $ref: "#/components/messages/EventPublishedEvent"
+          - $ref: "#/components/messages/EventCancelledEvent"
 components:
   schemas:
     EventCreatedEventPayload:
@@ -87,29 +88,41 @@ components:
           format: date-time
   messages:
     EventCreatedEvent:
+      messageId: EventCreatedEvent
       name: EventCreatedEvent
+      title: EventCreatedEvent
+      summary: Phát ra khi sự kiện được tạo mới ở trạng thái DRAFT.
       traits:
-        - $ref: '#/components/messageTraits/eventTrait'
+        - $ref: "#/components/messageTraits/eventTrait"
       payload:
-        $ref: '#/components/schemas/EventCreatedEventPayload'
+        $ref: "#/components/schemas/EventCreatedEventPayload"
     EventDetailsConfiguredEvent:
+      messageId: EventDetailsConfiguredEvent
       name: EventDetailsConfiguredEvent
+      title: EventDetailsConfiguredEvent
+      summary: Phát ra khi sự kiện đã được cấu hình chi tiết (số lượng vé, thời gian mở/đóng).
       traits:
-        - $ref: '#/components/messageTraits/eventTrait'
+        - $ref: "#/components/messageTraits/eventTrait"
       payload:
-        $ref: '#/components/schemas/EventDetailsConfiguredEventPayload'
+        $ref: "#/components/schemas/EventDetailsConfiguredEventPayload"
     EventPublishedEvent:
+      messageId: EventPublishedEvent
       name: EventPublishedEvent
+      title: EventPublishedEvent
+      summary: Phát ra khi sự kiện chính thức được PUBLISH (Registration Service tự động kích hoạt chiến dịch).
       traits:
-        - $ref: '#/components/messageTraits/eventTrait'
+        - $ref: "#/components/messageTraits/eventTrait"
       payload:
-        $ref: '#/components/schemas/EventPublishedEventPayload'
+        $ref: "#/components/schemas/EventPublishedEventPayload"
     EventCancelledEvent:
+      messageId: EventCancelledEvent
       name: EventCancelledEvent
+      title: EventCancelledEvent
+      summary: Phát ra khi sự kiện bị hủy bỏ (Registration Service sẽ tự động hủy các vé liên quan).
       traits:
-        - $ref: '#/components/messageTraits/eventTrait'
+        - $ref: "#/components/messageTraits/eventTrait"
       payload:
-        $ref: '#/components/schemas/EventCancelledEventPayload'
+        $ref: "#/components/schemas/EventCancelledEventPayload"
   messageTraits:
     eventTrait:
       headers:
