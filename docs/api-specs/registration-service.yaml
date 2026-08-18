@@ -32,47 +32,42 @@ paths:
         - $ref: "#/components/parameters/EventId"
       responses:
         "200":
-          description: Đăng ký đã mở.
+          description: Cổng đăng ký đã mở.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  eventId:
-                    type: string
-                    format: uuid
-                  registrationStatus:
-                    type: string
-                    enum:
-                      - OPEN
-                  opensAt:
-                    type: string
-                    format: date-time
+                $ref: "#/components/schemas/CampaignStatusApiResponse"
+  /events/{eventId}/registration/close:
+    post:
+      tags:
+        - Registration
+      summary: Đóng đăng ký khẩn cấp (CloseRegistration — override)
+      description:
+        "Endpoint này đóng vai trò như một **Emergency Kill Switch** (Nút dừng khẩn cấp). 
+        Cho phép Organizer đóng hoặc tạm dừng chiến dịch đăng ký vé ngay lập tức dù chưa đến hạn `closeAt`.
+        Thường dùng trong các trường hợp: Hệ thống cổng thanh toán bị lỗi, bán lố vé, hoặc sự kiện bị hủy đột xuất."
+      operationId: closeRegistration
+      x-required-role: ORGANIZER
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Cổng đăng ký đã được đóng thành công.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignStatusApiResponse"
   /registrations:
     post:
       tags:
         - Registration
       summary: Đăng ký tham gia sự kiện (RegisterForEvent)
       description:
-        "**High Availability First**: `RegisterForEvent` băng qua Resource
-        Context
-
-        (claim/hold slot) và với vé PAID còn băng qua Payment Context (Saga Choreography,
-
-        mục 3.4). API **không chờ** các bước đó — publish nội bộ
-
-        `RegisterForEventCommand` lên kênh AsyncAPI `registration-commands` rồi trả
-
-        `202 Accepted` ngay với trạng thái `REGISTRATION_PENDING`.
-
-        Kết quả cuối (`FreeRegistrationConfirmed` / `PaidRegistrationConfirmed` /
-
-        `PaidRegistrationRolledBack`) client theo dõi qua
-
-        `GET /registrations/{registrationId}` (poll) hoặc subscribe kênh Event
-
-        `Registration`.
-
+        "**Hybrid Saga**: Bước 1 của luồng đăng ký. 
+        API này hoạt động ĐỒNG BỘ: Giữ chỗ (hold slot) bên Resource Context và gọi Payment Context để tạo mã thanh toán (nếu là vé PAID). 
+        Trả về `201 Created` ngay lập tức kèm theo `paymentUrl` (nếu có).
+        
+        Bước 2 (Hoàn tất/Hủy) sẽ được xử lý BẤT ĐỒNG BỘ qua Kafka (Saga) khi nhận Webhook từ ngân hàng hoặc khi hết hạn timeout giữ vé.
         "
       operationId: registerForEvent
       requestBody:
@@ -82,12 +77,12 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterForEventRequest"
       responses:
-        "202":
-          description: Yêu cầu đăng ký đã được tiếp nhận, đang xử lý bất đồng bộ.
+        "201":
+          description: Yêu cầu đăng ký đã được tiếp nhận, trả về link thanh toán (nếu vé PAID).
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AsyncOperationApiResponse"
+                $ref: "#/components/schemas/ReserveTicketApiResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
     get:
@@ -110,10 +105,8 @@ paths:
           schema:
             type: string
             enum:
-              - REGISTRATION_PENDING
-              - FREE_CONFIRMED
-              - PAID_CONFIRMED
-              - PAID_ROLLED_BACK
+              - RESERVED
+              - CONFIRMED
               - CANCELLED
       responses:
         "200":
@@ -145,13 +138,7 @@ paths:
         - Registration
       summary: Hủy đăng ký (CancelRegistration)
       description:
-        "Publish nội bộ `CancelRegistrationCommand` (kênh `registration-commands`);
-
-        việc giải phóng slot bên Resource Context (`ReleaseSlot`) chạy bất đồng bộ
-        theo
-
-        Event `RegistrationCancelled`. Trả `202 Accepted` ngay theo nguyên tắc HA-first.
-
+        "Logic Hủy đăng ký thực hiện ĐỒNG BỘ. Cập nhật trạng thái thành CANCELLED và hoàn trả lại slot vé (releaseTicket) ngay lập tức trên DB nội bộ của Registration Service. Trả về `200 OK`.
         "
       operationId: cancelRegistration
       parameters:
@@ -165,12 +152,12 @@ paths:
                 reason:
                   type: string
       responses:
-        "202":
-          description: Yêu cầu hủy đã tiếp nhận, đang xử lý.
+        "200":
+          description: Đăng ký đã được hủy thành công và hoàn trả slot vé.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AsyncOperationApiResponse"
+                $ref: "#/components/schemas/RegistrationApiResponse"
         "404":
           $ref: "#/components/responses/NotFound"
   /health:
@@ -184,11 +171,44 @@ components:
     RegisterForEventRequest:
       type: object
       required:
-        - eventId
+        - campaignId
       properties:
-        eventId:
+        campaignId:
           type: string
           format: uuid
+    ReserveTicketApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: CREATED
+        message:
+          type: string
+          example: Đã khóa vé thành công. Vui lòng thanh toán (Nếu có)!
+        data:
+          type: object
+          properties:
+            registrationId:
+              type: string
+              format: uuid
+            paymentUrl:
+              type: string
+              format: uri
+              nullable: true
+              description: Link thanh toán VNPay/Momo. Sẽ là null nếu là vé FREE.
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
     AsyncOperationApiResponse:
       type: object
       required:
@@ -234,6 +254,43 @@ components:
         submittedAt:
           type: string
           format: date-time
+    CampaignStatusApiResponse:
+      type: object
+      required:
+        - success
+        - code
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: SUCCESS
+        message:
+          type: string
+          example: Thao tác cập nhật trạng thái cổng đăng ký thành công.
+        data:
+          type: object
+          properties:
+            eventId:
+              type: string
+              format: uuid
+            registrationStatus:
+              type: string
+              example: ACTIVE
+            opensAt:
+              type: string
+              format: date-time
+            closedAt:
+              type: string
+              format: date-time
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-13T08:00:00.000Z"
     RegistrationListApiResponse:
       type: object
       required:
@@ -271,19 +328,16 @@ components:
           format: uuid
         employeeId:
           type: string
-        ticketType:
-          type: string
-          enum:
-            - FREE
-            - PAID
         status:
           type: string
           enum:
-            - REGISTRATION_PENDING
-            - FREE_CONFIRMED
-            - PAID_CONFIRMED
-            - PAID_ROLLED_BACK
+            - RESERVED
+            - CONFIRMED
             - CANCELLED
+        cancelReason:
+          type: string
+          nullable: true
+          description: Lý do hủy đăng ký (nếu trạng thái là CANCELLED).
         registeredAt:
           type: string
           format: date-time
