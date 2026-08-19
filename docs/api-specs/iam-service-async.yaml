@@ -1,0 +1,96 @@
+asyncapi: 2.6.0
+info:
+  title: IAM Service - Async API
+  version: 1.0.0
+servers:
+  productionBroker:
+    url: http://localhost:9092
+    protocol: kafka
+    description: Message Broker
+channels:
+  Iam:
+    description: "Domain Events của Aggregate `Employee`."
+    publish:
+      operationId: emitEmployeeEvent
+      summary: IAM Service phát sự kiện thay đổi employee.
+      message:
+        oneOf:
+          - $ref: "#/components/messages/EmployeeCreatedEvent"
+          - $ref: "#/components/messages/EmployeeUpdatedEvent"
+          - $ref: "#/components/messages/EmployeeLockedEvent"
+          - $ref: "#/components/messages/EmployeeUnlockedEvent"
+components:
+  schemas:
+    EmployeeEventPayload:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        fullname:
+          type: string
+        email:
+          type: string
+        employeeCode:
+          type: string
+        status:
+          type: string
+        departmentId:
+          type: string
+        roleId:
+          type: string
+  messages:
+    EmployeeCreatedEvent:
+      messageId: EmployeeCreatedEvent
+      name: EmployeeCreatedEvent
+      title: EmployeeCreatedEvent
+      summary: Phát ra khi employee được tạo mới.
+      traits:
+        - $ref: "#/components/messageTraits/eventTrait"
+      payload:
+        $ref: "#/components/schemas/EmployeeEventPayload"
+    EmployeeUpdatedEvent:
+      messageId: EmployeeUpdatedEvent
+      name: EmployeeUpdatedEvent
+      title: EmployeeUpdatedEvent
+      summary: Phát ra khi thông tin employee được cập nhật.
+      traits:
+        - $ref: "#/components/messageTraits/eventTrait"
+      payload:
+        $ref: "#/components/schemas/EmployeeEventPayload"
+    EmployeeLockedEvent:
+      messageId: EmployeeLockedEvent
+      name: EmployeeLockedEvent
+      title: EmployeeLockedEvent
+      summary: Phát ra khi employee bị khóa.
+      traits:
+        - $ref: "#/components/messageTraits/eventTrait"
+      payload:
+        $ref: "#/components/schemas/EmployeeEventPayload"
+    EmployeeUnlockedEvent:
+      messageId: EmployeeUnlockedEvent
+      name: EmployeeUnlockedEvent
+      title: EmployeeUnlockedEvent
+      summary: Phát ra khi employee được mở khóa.
+      traits:
+        - $ref: "#/components/messageTraits/eventTrait"
+      payload:
+        $ref: "#/components/schemas/EmployeeEventPayload"
+  messageTraits:
+    eventTrait:
+      headers:
+        type: object
+        required:
+          - messageId
+          - correlationId
+          - timestamp
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          correlationId:
+            type: string
+            format: uuid
+            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
+          timestamp:
+            type: string
+            format: date-time

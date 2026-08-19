@@ -1,39 +1,33 @@
 package com.example.iam_service.application.service;
 
 import com.example.iam_service.application.in.EmployeeUseCase;
+import com.example.iam_service.application.dto.message.EmployeeEventPayload;
+import com.example.iam_service.application.port.out.IamMessagePort;
 import com.example.iam_service.domain.model.Department;
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.domain.model.Role;
-import com.example.iam_service.domain.model.OutboxEvent;
 import com.example.iam_service.domain.repository.IEmployeeRepository;
-import com.example.iam_service.domain.repository.IOutboxEventRepository;
 import com.example.iam_service.presentation.dto.CreateEmployeeRequest;
 import com.example.iam_service.presentation.dto.UpdateEmployeeRequest;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
 public class EmployeeService implements EmployeeUseCase {
 
     private final IEmployeeRepository employeeRepository;
-    private final IOutboxEventRepository outboxEventRepository;
+    private final IamMessagePort iamMessagePort;
     private final PasswordEncoder passwordEncoder;
-    private final ObjectMapper objectMapper;
 
     public EmployeeService(IEmployeeRepository employeeRepository, 
-                           IOutboxEventRepository outboxEventRepository, 
-                           PasswordEncoder passwordEncoder, 
-                           ObjectMapper objectMapper) {
+                           IamMessagePort iamMessagePort, 
+                           PasswordEncoder passwordEncoder) {
         this.employeeRepository = employeeRepository;
-        this.outboxEventRepository = outboxEventRepository;
+        this.iamMessagePort = iamMessagePort;
         this.passwordEncoder = passwordEncoder;
-        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -64,7 +58,7 @@ public class EmployeeService implements EmployeeUseCase {
 
         Employee savedEmployee = employeeRepository.save(employee);
         
-        saveOutboxEvent(savedEmployee.getId(), "EmployeeCreated", savedEmployee);
+        iamMessagePort.publishEmployeeEvent("EmployeeCreated", toPayload(savedEmployee));
         
         return savedEmployee;
     }
@@ -94,7 +88,7 @@ public class EmployeeService implements EmployeeUseCase {
         }
 
         Employee savedEmployee = employeeRepository.save(employee);
-        saveOutboxEvent(savedEmployee.getId(), "EmployeeUpdated", savedEmployee);
+        iamMessagePort.publishEmployeeEvent("EmployeeUpdated", toPayload(savedEmployee));
     }
 
     @Override
@@ -109,7 +103,7 @@ public class EmployeeService implements EmployeeUseCase {
 
         employee.lockEmployee();
         Employee savedEmployee = employeeRepository.save(employee);
-        saveOutboxEvent(savedEmployee.getId(), "EmployeeLocked", savedEmployee);
+        iamMessagePort.publishEmployeeEvent("EmployeeLocked", toPayload(savedEmployee));
     }
 
     @Override
@@ -124,22 +118,18 @@ public class EmployeeService implements EmployeeUseCase {
 
         employee.unlockEmployee();
         Employee savedEmployee = employeeRepository.save(employee);
-        saveOutboxEvent(savedEmployee.getId(), "EmployeeUnlocked", savedEmployee);
+        iamMessagePort.publishEmployeeEvent("EmployeeUnlocked", toPayload(savedEmployee));
     }
 
-    private void saveOutboxEvent(String aggregateId, String type, Object payload) {
-        try {
-            String payloadJson = objectMapper.writeValueAsString(payload);
-            OutboxEvent event = OutboxEvent.builder()
-                    .aggregateType("Employee")
-                    .aggregateId(aggregateId)
-                    .type(type)
-                    .payload(payloadJson)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-            outboxEventRepository.save(event);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize outbox event payload", e);
-        }
+    private EmployeeEventPayload toPayload(Employee employee) {
+        return EmployeeEventPayload.builder()
+                .employeeId(employee.getId())
+                .fullname(employee.getFullname())
+                .email(employee.getEmail())
+                .employeeCode(employee.getEmployeeCode())
+                .status(employee.getStatus())
+                .departmentId(employee.getDepartment() != null ? employee.getDepartment().getId() : null)
+                .roleId(employee.getRole() != null ? employee.getRole().getId() : null)
+                .build();
     }
 }

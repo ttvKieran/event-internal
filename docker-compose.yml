@@ -46,10 +46,10 @@ services:
 
   # ─── Database for IAM ────────────────────────────
   iam-db:
-    image: postgres:16-alpine
+    image: quay.io/debezium/postgres:16
     container_name: iam-db
     ports:
-      - "${IAM_DB_PORT:-5433}:5432"
+      - "${IAM_DB_PORT:-5434}:5432"
     environment:
       POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
       POSTGRES_USER: ${IAM_DB_USER:-postgres}
@@ -158,6 +158,30 @@ services:
     command: [ "sh", "/scripts/debezium/register-connector.sh" ]
     depends_on:
       - debezium
+    restart: "no"
+    networks:
+      - app-network
+
+  debezium-init-iam:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${IAM_DB_USER:-postgres}
+      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
+      - DB_NAME=${IAM_DB_NAME:-employee_db}
+      - DB_HOST=iam-db
+      - DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=iam-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Iam
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-iam-connector.sh" ]
+    depends_on:
+      - debezium
+      - iam-db
     restart: "no"
     networks:
       - app-network
