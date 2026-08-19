@@ -29,7 +29,6 @@ public class RegistrationKafkaListener {
     @KafkaListener(topics = "Registration", groupId = "${spring.kafka.consumer.group-id}")
     public void onRegistrationEvent(ConsumerRecord<String, String> record) {
         try {
-            // ── Đọc Header eventType ─────────────────────────────────────────
             Header typeHeader = record.headers().lastHeader("eventType");
             if (typeHeader == null) {
                 log.warn("[Payment] Không tìm thấy Header 'eventType'. Bỏ qua.");
@@ -37,10 +36,9 @@ public class RegistrationKafkaListener {
             }
             String eventType = new String(typeHeader.value());
 
-            // ── Idempotency: Kiểm tra tin nhắn đã xử lý chưa ────────────────
             Header msgIdHeader = record.headers().lastHeader("messageId");
             if (msgIdHeader == null) {
-                log.warn("[Payment] Không tìm thấy Header 'messageId'. Bỏ qua để an toàn.");
+                log.warn("[Payment] Không tìm thấy Header 'messageId'. Bỏ qua.");
                 return;
             }
             String messageId = new String(msgIdHeader.value());
@@ -50,7 +48,6 @@ public class RegistrationKafkaListener {
             }
             processedMessageRepository.save(new ProcessedMessageEntity(messageId, Instant.now()));
 
-            // ── Unwrap payload (giống EventKafkaListener) ────────────────────
             String rawValue = record.value();
             JsonNode rootNode = objectMapper.readTree(rawValue);
             String actualPayload = rootNode.has("payload")
@@ -59,18 +56,16 @@ public class RegistrationKafkaListener {
 
             log.info("[Payment] Nhận sự kiện: {} | messageId: {}", eventType, messageId);
 
-            // ── Phân luồng xử lý ─────────────────────────────────────────────
+            // Phân luồng xử lý
             switch (eventType) {
                 case "RegistrationRequestedEvent" -> {
                     RegistrationRequestedPayload payload =
                         objectMapper.readValue(actualPayload, RegistrationRequestedPayload.class);
                     paymentUseCase.handleRegistrationRequested(payload);
-                    log.info("[Payment] Tạo giao dịch thành công cho registrationId={}",
-                        payload.getRegistrationId());
+                    log.info("[Payment] Tạo giao dịch thành công cho registrationId={}", payload.getRegistrationId());
                 }
                 default -> log.debug("[Payment] Bỏ qua sự kiện không hỗ trợ: {}", eventType);
             }
-
         } catch (Exception e) {
             log.error("[Payment] Lỗi xử lý Kafka message: {}", e.getMessage(), e);
         }

@@ -140,6 +140,54 @@ services:
     networks:
       - app-network
 
+  registration-debezium-init:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${REGISTRATION_DB_NAME:-registration_db}
+      - DB_HOST=registration-db
+      - EVENT_DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=registration-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Registration
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-connector.sh" ]
+    depends_on:
+      - debezium
+      - registration-db
+    restart: "no"
+    networks:
+      - app-network
+
+  payment-debezium-init:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${PAYMENT_DB_NAME:-payment_db}
+      - DB_HOST=payment-db
+      - EVENT_DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=payment-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Payment
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-connector.sh" ]
+    depends_on:
+      - debezium
+      - payment-db
+    restart: "no"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge

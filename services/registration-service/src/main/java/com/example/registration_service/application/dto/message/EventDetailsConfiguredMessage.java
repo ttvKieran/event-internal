@@ -11,6 +11,7 @@ public class EventDetailsConfiguredMessage {
     private UUID eventId;
     private String ticketType;
     private int maxParticipants;
+    private java.math.BigDecimal price;
     private LocalDateTime registrationOpenAt;
     private LocalDateTime registrationCloseAt;
 }

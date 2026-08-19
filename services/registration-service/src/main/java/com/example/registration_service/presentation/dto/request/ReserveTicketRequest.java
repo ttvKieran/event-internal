@@ -9,4 +9,5 @@ import java.util.UUID;
 public class ReserveTicketRequest {
     @NotNull(message = "ID Chiến dịch không được để trống")
     private UUID campaignId;
+    private String provider;
 }

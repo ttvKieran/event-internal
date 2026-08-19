@@ -14,4 +14,5 @@ import java.util.UUID;
 public class ReserveTicketDTO {
     private UUID campaignId;
     private UUID userId;
+    private String provider;
 }

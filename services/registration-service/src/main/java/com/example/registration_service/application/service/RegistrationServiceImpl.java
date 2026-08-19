@@ -2,6 +2,7 @@ package com.example.registration_service.application.service;
 
 import com.example.registration_service.application.dto.ReserveTicketDTO;
 import com.example.registration_service.application.port.in.RegistrationUseCase;
+import com.example.registration_service.application.port.out.RegistrationMessagePort;
 import com.example.registration_service.domain.model.aggregate.Registration;
 import com.example.registration_service.domain.model.aggregate.RegistrationCampaign;
 import com.example.registration_service.domain.model.valueobject.CampaignStatus;
@@ -24,6 +25,7 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
 
     private final RegistrationCampaignRepository campaignRepo;
     private final RegistrationRepository registrationRepo;
+    private final RegistrationMessagePort messagePort;
 
     @Override
     @Transactional
@@ -37,10 +39,20 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
         boolean isFree = campaign.getTicketType() == TicketType.FREE;
         Registration registration = Registration.createNew(command.getCampaignId(), command.getUserId(), isFree);
 
-        // Gọi đồng bộ payment service để lấy mã quét thanh toán
-
         campaignRepo.save(campaign);
         registrationRepo.save(registration);
+
+        // Nếu là vé PAID → Saga, bắn Event để Payment Service tạo giao dịch
+        if (!isFree) {
+            if (command.getProvider() == null) {
+                throw new IllegalArgumentException("Vé thu phí bắt buộc phải chọn cổng thanh toán (provider)");
+            }
+            messagePort.publishRegistrationRequested(registration, campaign.getPrice(), command.getProvider());
+        }
+        // Nếu là vé FREE → Tự confirm luôn, bắn Event thông báo
+        else {
+            messagePort.publishRegistrationConfirmed(registration);
+        }
 
         return registration.getRegistrationId();
     }
@@ -53,6 +65,8 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
 
         registration.confirm();
         registrationRepo.save(registration);
+
+        messagePort.publishRegistrationConfirmed(registration);
     }
 
     @Override

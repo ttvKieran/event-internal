@@ -1,21 +1,18 @@
-package com.example.payment_service.application.dto.message;
+package com.example.registration_service.application.dto.message;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
+import lombok.Data;
 import java.util.UUID;
 
-@Getter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RegistrationRequestedPayload {
+public class RegistrationRequestedEventPayload {
     private UUID registrationId;
     private UUID campaignId;
     private UUID employeeId;
-    private BigDecimal amount;
+    private java.math.BigDecimal amount;
     private String provider;
+    private String registeredAt;
 }

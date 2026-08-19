@@ -12,6 +12,7 @@ public class RegistrationApiMapper {
     public ReserveTicketDTO toAppCommand(ReserveTicketRequest request, UUID userId) {
         return ReserveTicketDTO.builder()
             .campaignId(request.getCampaignId())
+            .provider(request.getProvider())
             .userId(userId)
             .build();
     }

@@ -68,6 +68,7 @@ public class EventKafkaListener {
                         configuredMsg.getEventId(),
                         configuredMsg.getTicketType(),
                         configuredMsg.getMaxParticipants(),
+                        configuredMsg.getPrice(),
                         configuredMsg.getRegistrationOpenAt(),
                         configuredMsg.getRegistrationCloseAt()
                     );

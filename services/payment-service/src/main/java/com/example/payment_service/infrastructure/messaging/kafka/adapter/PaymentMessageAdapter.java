@@ -1,5 +1,7 @@
 package com.example.payment_service.infrastructure.messaging.kafka.adapter;
 
+import com.example.payment_service.application.dto.message.PaymentFailedEventPayload;
+import com.example.payment_service.application.dto.message.PaymentSucceededEventPayload;
 import com.example.payment_service.application.port.out.PaymentMessagePort;
 import com.example.payment_service.domain.model.aggregate.PaymentTransaction;
 import com.example.payment_service.infrastructure.persistence.entity.OutboxEventEntity;
@@ -10,8 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,41 +21,41 @@ public class PaymentMessageAdapter implements PaymentMessagePort {
     private final ObjectMapper objectMapper;
 
     @Override
-    public void publishPaymentSucceeded(PaymentTransaction transaction) {
-        Map<String, Object> payload = Map.of(
-            "paymentId",      transaction.getPaymentId().toString(),
-            "registrationId", transaction.getRegistrationId().toString(),
-            "campaignId",     transaction.getCampaignId().toString(),
-            "amount",         transaction.getAmount().getAmount(),
-            "providerTxnId",  transaction.getProviderTxnId() != null ? transaction.getProviderTxnId() : "",
-            "paidAt",         transaction.getUpdatedAt().toString()
+    public void publishPaymentSucceeded(PaymentTransaction txn) {
+        PaymentSucceededEventPayload payload = new PaymentSucceededEventPayload(
+            txn.getPaymentId(),
+            txn.getRegistrationId(),
+            txn.getCampaignId(),
+            txn.getAmount().getAmount(),
+            txn.getProviderTxnId() != null ? txn.getProviderTxnId() : "",
+            txn.getUpdatedAt().toString()
         );
-        insertOutbox(transaction, "PaymentSucceededEvent", payload);
+        insertOutbox(txn, "PaymentSucceededEvent", payload);
     }
 
     @Override
-    public void publishPaymentFailed(PaymentTransaction transaction, String reason) {
-        Map<String, Object> payload = Map.of(
-            "paymentId",      transaction.getPaymentId().toString(),
-            "registrationId", transaction.getRegistrationId().toString(),
-            "campaignId",     transaction.getCampaignId().toString(),
-            "reason",         reason,
-            "failedAt",       transaction.getUpdatedAt().toString()
+    public void publishPaymentFailed(PaymentTransaction txn, String reason) {
+        PaymentFailedEventPayload payload = new PaymentFailedEventPayload(
+            txn.getPaymentId(),
+            txn.getRegistrationId(),
+            txn.getCampaignId(),
+            reason,
+            txn.getUpdatedAt().toString()
         );
-        insertOutbox(transaction, "PaymentFailedEvent", payload);
+        insertOutbox(txn, "PaymentFailedEvent", payload);
     }
 
-    private void insertOutbox(PaymentTransaction transaction, String eventType, Map<String, Object> payload) {
+    private void insertOutbox(PaymentTransaction txn, String eventType, Object payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);
             OutboxEventEntity outbox = OutboxEventEntity.of(
                 "PaymentTransaction",
-                transaction.getPaymentId().toString(),
+                txn.getPaymentId().toString(),
                 eventType,
                 json
             );
             outboxRepository.save(outbox);
-            log.info("[Outbox] Đã ghi sự kiện {} cho paymentId={}", eventType, transaction.getPaymentId());
+            log.info("[Outbox] Đã ghi sự kiện {} cho paymentId={}", eventType, txn.getPaymentId());
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Lỗi serialize Outbox Event: " + eventType, e);
         }

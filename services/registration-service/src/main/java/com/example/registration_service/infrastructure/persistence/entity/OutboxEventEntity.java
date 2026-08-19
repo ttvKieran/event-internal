@@ -1,4 +1,4 @@
-package com.example.payment_service.infrastructure.persistence.entity;
+package com.example.registration_service.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -20,16 +20,16 @@ public class OutboxEventEntity {
     private UUID id;
 
     @Column(nullable = false)
-    private String aggregateType;   // "PaymentTransaction"
+    private String aggregateType;
 
     @Column(nullable = false)
-    private String aggregateId;     // paymentId.toString()
+    private String aggregateId;
 
     @Column(nullable = false)
-    private String type;       // "PaymentSucceededEvent" / "PaymentFailedEvent"
+    private String type;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String payload;         // JSON
+    private String payload;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
