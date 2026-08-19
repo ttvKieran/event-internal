@@ -109,6 +109,7 @@ public class EventServiceImpl implements EventUseCase {
                 .maxParticipants(event.getTicketDetails().getMaxParticipants())
                 .registrationOpenAt(event.getSchedule().getRegistrationOpenAt())
                 .registrationCloseAt(event.getSchedule().getRegistrationCloseAt())
+                .price(event.getTicketDetails().getPrice())
                 .build(),
             correlationId
         );

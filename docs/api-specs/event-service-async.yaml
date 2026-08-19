@@ -66,6 +66,9 @@ components:
         registrationCloseAt:
           type: string
           format: date-time
+        price:
+          type: number
+          format: double
     EventPublishedEventPayload:
       type: object
       properties:

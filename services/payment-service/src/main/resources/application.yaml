@@ -1,0 +1,49 @@
+server:
+  port: ${PAYMENT_SERVICE_PORT:8084}
+
+spring:
+  application:
+    name: payment-service
+
+  # Cấu hình Database
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${PAYMENT_DB_PORT:5434}/${PAYMENT_DB_NAME:payment_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  # Cấu hình JPA / Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Cấu hình Kafka
+  kafka:
+    bootstrap-servers: ${KAFKA_URL:localhost:9092}
+    producer:
+      # Key ID chuỗi nên dùng StringSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Value là JSON Object nên dùng JsonSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # Không tự động gán metadata về Type (Tên Class) vào JSON header
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: payment-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+# Nghiệp vụ thanh toán
+payment:
+  expiration:
+    timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:15}        # Thời gian giữ vé tối đa
+    scheduler-cron: ${PAYMENT_SCHEDULER_CRON:0 */5 * * * *}  # Tần suất quét hết hạn

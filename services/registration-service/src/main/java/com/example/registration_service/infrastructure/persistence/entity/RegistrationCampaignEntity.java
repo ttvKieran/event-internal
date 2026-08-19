@@ -21,6 +21,8 @@ public class RegistrationCampaignEntity extends BaseEntity {
     private String ticketType;
     private Integer maxParticipants;
     private Integer currentParticipants;
+    @jakarta.persistence.Column(precision = 15, scale = 2)
+    private java.math.BigDecimal price;
 
     private LocalDateTime openAt;
     private LocalDateTime closeAt;

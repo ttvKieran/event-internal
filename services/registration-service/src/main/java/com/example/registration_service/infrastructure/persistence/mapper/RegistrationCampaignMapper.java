@@ -22,6 +22,7 @@ public class RegistrationCampaignMapper {
 
         entity.setMaxParticipants(domain.getMaxParticipants());
         entity.setCurrentParticipants(domain.getCurrentParticipants());
+        entity.setPrice(domain.getPrice());
 
         if (domain.getTimeWindow() != null) {
             entity.setOpenAt(domain.getTimeWindow().getOpenAt());
@@ -48,6 +49,7 @@ public class RegistrationCampaignMapper {
             entity.getTicketType() != null ? TicketType.of(entity.getTicketType()) : null,
             entity.getMaxParticipants(),
             entity.getCurrentParticipants(),
+            entity.getPrice(),
             timeWindow,
             entity.getStatus() != null ? CampaignStatus.of(entity.getStatus()) : null
         );

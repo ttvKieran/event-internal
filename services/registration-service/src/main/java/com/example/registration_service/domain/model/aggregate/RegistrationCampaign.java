@@ -6,6 +6,7 @@ import com.example.registration_service.domain.model.valueobject.TicketType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -16,13 +17,14 @@ public class RegistrationCampaign {
     private TicketType ticketType;
     private Integer maxParticipants;
     private Integer currentParticipants;
+    private java.math.BigDecimal price;
     private RegistrationTimeWindow timeWindow;
     private CampaignStatus status;
 
     private RegistrationCampaign() {}
 
     public static RegistrationCampaign createSnapshot(
-        UUID campaignId, TicketType ticketType, Integer maxParticipants,
+        UUID campaignId, TicketType ticketType, Integer maxParticipants, java.math.BigDecimal price,
         RegistrationTimeWindow timeWindow) {
 
         RegistrationCampaign campaign = new RegistrationCampaign();
@@ -32,6 +34,7 @@ public class RegistrationCampaign {
         campaign.currentParticipants = 0;
         campaign.timeWindow = timeWindow;
         campaign.status = CampaignStatus.PENDING;
+        campaign.price = price;
         return campaign;
     }
 
@@ -82,7 +85,7 @@ public class RegistrationCampaign {
 
     public static RegistrationCampaign reconstitute(
         UUID campaignId, TicketType ticketType, Integer maxParticipants,
-        Integer currentParticipants, RegistrationTimeWindow timeWindow, CampaignStatus status) {
+        Integer currentParticipants, BigDecimal price, RegistrationTimeWindow timeWindow, CampaignStatus status) {
 
         RegistrationCampaign campaign = new RegistrationCampaign();
         campaign.campaignId = campaignId;
@@ -91,6 +94,7 @@ public class RegistrationCampaign {
         campaign.currentParticipants = currentParticipants;
         campaign.timeWindow = timeWindow;
         campaign.status = status;
+        campaign.price = price;
         return campaign;
     }
 }
