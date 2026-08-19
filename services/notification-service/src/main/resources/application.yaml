@@ -1,0 +1,68 @@
+server:
+  port: ${NOTIFICATION_SERVICE_PORT:8087}
+
+spring:
+  config:
+    import: "optional:file:.env[.properties]"
+  application:
+    name: notification-service
+  # Cấu hình JavaMail
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Cấu hình Thymeleaf cho Email Template
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+
+  # Cấu hình Database
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${NOTIFICATION_DB_PORT:5437}/${NOTIFICATION_DB_NAME:notification_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  # Cấu hình JPA / Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Cấu hình Kafka
+  kafka:
+    bootstrap-servers: ${KAFKA_URL:localhost:9092}
+    producer:
+      # Key ID chuỗi nên dùng StringSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Value là JSON Object nên dùng JsonSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # Không tự động gán metadata về Type (Tên Class) vào JSON header
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+
+

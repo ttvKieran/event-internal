@@ -99,6 +99,19 @@ services:
     networks:
       - app-network
 
+  notification-db:
+    image: quay.io/debezium/postgres:16
+    ports:
+      - "${NOTIFICATION_DB_PORT:-5437}:5432"
+    environment:
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-notification_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
@@ -232,4 +245,5 @@ volumes:
   iam-db-data:
   registration_db_data:
   payment_db_data:
+  notification_db_data:
 
