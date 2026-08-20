@@ -4,6 +4,7 @@ import com.example.event_service.application.dto.ConfigureEventDTO;
 import com.example.event_service.application.dto.CreateEventDTO;
 import com.example.event_service.application.dto.EventDetailsDTO;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface EventUseCase {
@@ -16,4 +17,6 @@ public interface EventUseCase {
     EventDetailsDTO cancelEvent(UUID eventId, String reason);
 
     EventDetailsDTO getEventDetails(UUID eventId);
+
+    List<EventDetailsDTO> getEvents(String status, int page, int size);
 }

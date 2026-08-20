@@ -102,4 +102,11 @@ public class PaymentServiceImpl implements PaymentUseCase {
             log.info("[Payment] Đã hủy giao dịch hết hạn. registrationId={}", txn.getRegistrationId());
         }
     }
+
+    @Override
+    public PaymentTransaction getPaymentByRegistrationId(UUID registrationId) {
+        return paymentRepository.findByRegistrationId(registrationId)
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch cho registrationId=" + registrationId));
+    }
+
 }
