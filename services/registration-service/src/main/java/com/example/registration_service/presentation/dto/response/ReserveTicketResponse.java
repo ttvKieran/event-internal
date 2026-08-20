@@ -12,5 +12,4 @@ import java.util.UUID;
 public class ReserveTicketResponse {
     private UUID registrationId;
     private String message;
-    private String paymentUrl;
 }
