@@ -1,4 +1,4 @@
-# Docker Compose — Multi-container orchestration
+﻿# Docker Compose — Multi-container orchestration
 # Run: docker compose up --build
 # Docs: https://docs.docker.com/compose/
 
@@ -23,6 +23,7 @@ services:
       - iam-service
     environment:
       - IAM_SERVICE_URL=http://iam-service:8085
+      - ATTENDANCE_SERVICE_URL=http://attendance-service:8086
       - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
     networks:
       - app-network
@@ -56,6 +57,37 @@ services:
       POSTGRES_PASSWORD: ${IAM_DB_PASSWORD:-postgres}
     volumes:
       - iam-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # ─── Attendance Service ─────────────────────────────────
+  attendance-service:
+    build: ./services/attendance-service
+    container_name: attendance-service
+    ports:
+      - "${ATTENDANCE_SERVICE_PORT:-8086}:8086"
+    depends_on:
+      - attendance-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://attendance-db:5432/${ATTENDANCE_DB_NAME:-attendance_db}
+      - DB_USERNAME=${ATTENDANCE_DB_USER:-postgres}
+      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
+      - SPRING_SQL_INIT_MODE=always
+    networks:
+      - app-network
+
+  # ─── Database for IAM ────────────────────────────
+  attendance-db:
+    image: quay.io/debezium/postgres:16
+    container_name: attendance-db
+    ports:
+      - "${ATTENDANCE_DB_PORT:-5435}:5432"
+    environment:
+      POSTGRES_DB: ${ATTENDANCE_DB_NAME:-attendance_db}
+      POSTGRES_USER: ${ATTENDANCE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ATTENDANCE_DB_PASSWORD:-postgres}
+    volumes:
+      - attendance-db-data:/var/lib/postgresql/data
     networks:
       - app-network
 
@@ -186,6 +218,30 @@ services:
     networks:
       - app-network
 
+  debezium-init-attendance:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
+      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
+      - DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
+      - DB_HOST=attendance-db
+      - DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=attendance-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Attendance
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-attendance-connector.sh" ]
+    depends_on:
+      - debezium
+      - attendance-db
+    restart: "no"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
@@ -193,5 +249,7 @@ networks:
 volumes:
   event-db-data:
   iam-db-data:
+  attendance-db-data:
   registration_db_data:
+
 
