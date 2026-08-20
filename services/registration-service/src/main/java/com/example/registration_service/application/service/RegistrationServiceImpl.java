@@ -47,7 +47,7 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
             if (command.getProvider() == null) {
                 throw new IllegalArgumentException("Vé thu phí bắt buộc phải chọn cổng thanh toán (provider)");
             }
-            messagePort.publishRegistrationRequested(registration, campaign.getPrice(), command.getProvider());
+            messagePort.publishRegistrationRequested(registration, campaign.getPrice(), command.getProvider().getCode());
         }
         // Nếu là vé FREE → Tự confirm luôn, bắn Event thông báo
         else {

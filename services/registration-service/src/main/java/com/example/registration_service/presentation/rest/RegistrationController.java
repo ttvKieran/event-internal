@@ -39,8 +39,7 @@ public class RegistrationController {
 
         ReserveTicketResponse responseDto = new ReserveTicketResponse(
             registrationId,
-            "Đã khóa vé, chờ thanh toán.",
-            "https://sandbox.vnpayment.vn/paymentv" // Tạm thời chưa có payment service mock
+            "Đã khóa vé, chờ thanh toán."
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
