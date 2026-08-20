@@ -4,6 +4,7 @@ import com.example.attendance_service.application.port.in.ScanQrUseCase;
 import com.example.attendance_service.domain.model.aggregate.QRSession;
 import com.example.attendance_service.presentation.dto.request.ScanQrRequest;
 import com.example.attendance_service.presentation.dto.response.ApiResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
@@ -21,6 +22,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/events/{eventId}/session")
+    @PreAuthorize("hasAuthority('ORGANIZER')")
     public ResponseEntity<ApiResponse> createSession(@PathVariable String eventId) {
         QRSession session = manageQRSessionUseCase.createNewSession(eventId);
         return ResponseEntity.ok(new ApiResponse(

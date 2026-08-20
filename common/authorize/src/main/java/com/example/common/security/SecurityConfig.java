@@ -1,4 +1,4 @@
-package com.example.iam_service.infrastructure.security;
+package com.example.common.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,10 +16,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter;
-
-    public SecurityConfig(GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter) {
-        this.gatewayHeaderAuthenticationFilter = gatewayHeaderAuthenticationFilter;
+    @Bean
+    public GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter() {
+        return new GatewayHeaderAuthenticationFilter();
     }
 
     @Bean
@@ -28,11 +27,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, GatewayHeaderAuthenticationFilter filter) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-            .addFilterBefore(gatewayHeaderAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()) 
+            .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

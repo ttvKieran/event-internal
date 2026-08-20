@@ -21,28 +21,26 @@ public class ResourceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ApiResponse<Resource> createResource(@RequestBody CreateResourceRequest request) {
         Resource resource = resourceUseCase.createResource(request);
         return ApiResponse.<Resource>builder().success(true).code("SUCCESS").message("Resource created").data(resource).build();
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANIZER', 'EMPLOYEE')")
     public ApiResponse<List<Resource>> listResources(@RequestParam(required = false) String type) {
         List<Resource> resources = resourceUseCase.listResources(type);
         return ApiResponse.<List<Resource>>builder().success(true).code("SUCCESS").message("List resources").data(resources).build();
     }
 
     @GetMapping("/{resourceId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANIZER', 'EMPLOYEE')")
     public ApiResponse<Resource> getResource(@PathVariable String resourceId) {
         Resource resource = resourceUseCase.getResource(resourceId);
         return ApiResponse.<Resource>builder().success(true).code("SUCCESS").message("Get resource").data(resource).build();
     }
 
     @PatchMapping("/{resourceId}/configuration")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ApiResponse<Resource> configureResource(@PathVariable String resourceId, @RequestBody ConfigureResourceRequest request) {
         Resource resource = resourceUseCase.configureResource(resourceId, request);
         return ApiResponse.<Resource>builder().success(true).code("SUCCESS").message("Configured").data(resource).build();
