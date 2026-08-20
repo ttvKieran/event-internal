@@ -46,7 +46,7 @@ spring:
 # Cấu hình Bien môi trường
 services:
   registration:
-    url: http://localhost:8083
+    url: ${REGISTRATION_SERVICE_URL:http://localhost:8083}
 # Cấu hình Circuit Breaker
 resilience4j:
   circuitbreaker:
