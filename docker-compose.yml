@@ -50,7 +50,7 @@ services:
     image: quay.io/debezium/postgres:16
     container_name: iam-db
     ports:
-      - "${IAM_DB_PORT:-5434}:5432"
+      - "${IAM_DB_PORT:-5435}:5432"
     environment:
       POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
       POSTGRES_USER: ${IAM_DB_USER:-postgres}
@@ -76,12 +76,12 @@ services:
     networks:
       - app-network
 
-  # ─── Database for IAM ────────────────────────────
+  # ─── Database for ATTENDANCE ────────────────────────────
   attendance-db:
     image: quay.io/debezium/postgres:16
     container_name: attendance-db
     ports:
-      - "${ATTENDANCE_DB_PORT:-5435}:5432"
+      - "${ATTENDANCE_DB_PORT:-5436}:5432"
     environment:
       POSTGRES_DB: ${ATTENDANCE_DB_NAME:-attendance_db}
       POSTGRES_USER: ${ATTENDANCE_DB_USER:-postgres}
