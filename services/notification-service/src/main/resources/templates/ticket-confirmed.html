@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Đăng ký thành công</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1a73e8 0%,#0d47a1 100%);padding:40px 48px;text-align:center;">
+              <p style="margin:0 0 12px 0;font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase;">VTIT Internal Events</p>
+              <h1 style="margin:0;font-size:28px;font-weight:700;color:#ffffff;line-height:1.3;">
+                ✅ Đăng ký thành công!
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 48px;">
+              <p style="margin:0 0 20px 0;font-size:16px;color:#3d3d3d;line-height:1.7;">
+                Xin chào,
+              </p>
+              <p style="margin:0 0 32px 0;font-size:16px;color:#3d3d3d;line-height:1.7;">
+                Yêu cầu đăng ký tham dự sự kiện của bạn đã được <strong style="color:#1a73e8;">xác nhận thành công</strong>.
+                Chúng tôi rất vui khi được đón tiếp bạn!
+              </p>
+
+              <!-- Info Card -->
+              <table width="100%" cellpadding="0" cellspacing="0"
+                     style="background-color:#f0f4ff;border-left:4px solid #1a73e8;border-radius:8px;margin-bottom:32px;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 12px 0;font-size:13px;font-weight:600;color:#1a73e8;text-transform:uppercase;letter-spacing:1px;">
+                      Thông tin đăng ký
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0;font-size:14px;color:#555;width:40%;">Mã đăng ký:</td>
+                        <td style="padding:6px 0;font-size:14px;color:#1d1d1d;font-weight:600;font-family:monospace;"
+                            th:text="${registrationId}">REG-XXXXXXXX</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;font-size:14px;color:#555;">Mã chiến dịch:</td>
+                        <td style="padding:6px 0;font-size:14px;color:#1d1d1d;font-weight:600;font-family:monospace;"
+                            th:text="${campaignId}">CAM-XXXXXXXX</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;font-size:14px;color:#555;">Thời gian xác nhận:</td>
+                        <td style="padding:6px 0;font-size:14px;color:#1d1d1d;font-weight:600;"
+                            th:text="${confirmedAt}">19/08/2026 14:00</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 16px 0;font-size:15px;color:#555;line-height:1.7;">
+                📌 <strong>Lưu ý:</strong> Vui lòng có mặt đúng giờ tại địa điểm tổ chức sự kiện.
+                Ban tổ chức sẽ kiểm tra danh sách đăng ký tại cửa vào.
+              </p>
+
+              <p style="margin:0;font-size:15px;color:#555;line-height:1.7;">
+                Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ ban tổ chức qua hệ thống nội bộ.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 48px;">
+              <hr style="border:none;border-top:1px solid #eee;margin:0;"/>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 48px;text-align:center;">
+              <p style="margin:0 0 6px 0;font-size:13px;color:#aaa;">
+                Email này được gửi tự động từ hệ thống <strong style="color:#777;">VTIT Internal Events</strong>.
+              </p>
+              <p style="margin:0;font-size:12px;color:#ccc;">Vui lòng không trả lời email này.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

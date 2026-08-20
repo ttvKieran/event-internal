@@ -20,6 +20,7 @@ public class EventDetailsConfiguredEventPayload {
     private Integer maxParticipants;
     private LocalDateTime registrationOpenAt;
     private LocalDateTime registrationCloseAt;
+    private java.math.BigDecimal price;
 
     @Data
     @Builder

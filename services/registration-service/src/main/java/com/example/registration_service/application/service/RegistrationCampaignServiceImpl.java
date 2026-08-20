@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -22,10 +23,10 @@ public class RegistrationCampaignServiceImpl implements RegistrationCampaignUseC
     @Override
     @Transactional
     public void createCampaignSnapshot(UUID campaignId, String ticketTypeCode,
-                                       Integer maxParticipants, LocalDateTime openAt, LocalDateTime closeAt) {
+                                       Integer maxParticipants, BigDecimal price, LocalDateTime openAt, LocalDateTime closeAt) {
         RegistrationTimeWindow timeWindow = RegistrationTimeWindow.of(openAt, closeAt);
         RegistrationCampaign campaign = RegistrationCampaign.createSnapshot(
-            campaignId, TicketType.of(ticketTypeCode), maxParticipants, timeWindow
+            campaignId, TicketType.of(ticketTypeCode), maxParticipants, price,timeWindow
         );
         campaignRepo.save(campaign);
     }

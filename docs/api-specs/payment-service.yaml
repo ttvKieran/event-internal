@@ -8,80 +8,42 @@ servers:
   - url: https://api.events.staging.company.vn/v1
     description: Staging
 paths:
-  /payments/{paymentId}:
+  /payments/vnpay-ipn:
     get:
       tags:
         - Payment
-      summary: Payment Status Monitor (Read Model)
-      operationId: getPayment
-      parameters:
-        - $ref: '#/components/parameters/PaymentId'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaymentApiResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /payments/{paymentId}/refund-requests:
-    post:
-      tags:
-        - Payment
-      summary: Yêu cầu hoàn tiền (RequestRefund)
-      description: 'Kết quả hoàn tiền phụ thuộc webhook bất đồng bộ từ VNPay/Momo
-        (ACL, mục 3.5)
-
-        nên publish `RequestRefundCommand` (kênh `payment-commands`) và trả
-
-        `202 Accepted` với trạng thái `REFUND_REQUESTED`.
-
-        '
-      operationId: requestRefund
-      x-required-role: ORGANIZER
-      parameters:
-        - $ref: '#/components/parameters/PaymentId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RequestRefundRequest'
-      responses:
-        '202':
-          description: Yêu cầu hoàn tiền đã tiếp nhận.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AsyncOperationApiResponse'
-  /payments/webhooks/vnpay:
-    post:
-      tags:
-        - Payment
-      summary: Webhook callback từ VNPay (ACL boundary)
-      description: 'Payment Service tự dịch payload VNPay (mã merchant, HMAC signature,
-        returnUrl)
-
-        qua `PaymentGatewayAdapter` (Anticorruption Layer, mục 3.5) rồi publish nội
-        bộ
-
-        `ConfirmPaymentCommand` hoặc `FailPaymentCommand` lên kênh `payment-commands`.
-
-        Trả `200` ngay cho VNPay theo yêu cầu chuẩn webhook, không chờ xử lý xong.
-
-        '
-      operationId: handleVnpayWebhook
+      summary: Webhook callback từ VNPay (IPN)
+      description: 'VNPay gọi ngầm qua GET request để báo kết quả thanh toán. Payment Service xử lý chữ ký bảo mật và cập nhật giao dịch.'
+      operationId: vnPayIpn
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VnpayWebhookPayload'
+      parameters:
+        - name: vnp_TxnRef
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID của Registration (hoặc Order)
+        - name: vnp_TransactionNo
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Mã giao dịch tại VNPay
+        - name: vnp_ResponseCode
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Mã phản hồi từ VNPay (00 = Thành công)
+        - name: vnp_SecureHash
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Chữ ký bảo mật HMAC-SHA512
       responses:
         '200':
-          description: Đã tiếp nhận webhook.
+          description: Đã tiếp nhận webhook. Phản hồi chuẩn cho VNPay.
           content:
             application/json:
               schema:
@@ -92,34 +54,7 @@ paths:
                     example: '00'
                   Message:
                     type: string
-                    example: Confirmed
-  /payments/webhooks/momo:
-    post:
-      tags:
-        - Payment
-      summary: Webhook callback từ Momo (ACL boundary)
-      operationId: handleMomoWebhook
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MomoWebhookPayload'
-      responses:
-        '200':
-          description: Đã tiếp nhận webhook.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  resultCode:
-                    type: integer
-                    example: 0
-                  message:
-                    type: string
-                    example: Success
+                    example: Confirm Success
   /health:
     get:
       summary: Health check
@@ -128,140 +63,6 @@ paths:
           description: OK
 components:
   schemas:
-    PaymentApiResponse:
-      type: object
-      required:
-        - success
-        - code
-        - message
-        - data
-        - timestamp
-      properties:
-        success:
-          type: boolean
-          example: true
-        code:
-          type: string
-          example: SUCCESS
-        message:
-          type: string
-          example: Lấy thông tin thanh toán thành công.
-        data:
-          $ref: '#/components/schemas/PaymentRecord'
-        timestamp:
-          type: string
-          format: date-time
-          example: '2026-08-13T08:00:00.000Z'
-    PaymentRecord:
-      type: object
-      properties:
-        paymentId:
-          type: string
-          format: uuid
-        registrationId:
-          type: string
-          format: uuid
-        amount:
-          type: number
-        gateway:
-          type: string
-          enum:
-            - VNPAY
-            - MOMO
-        gatewayTransactionId:
-          type: string
-        status:
-          type: string
-          enum:
-            - PAYMENT_REQUESTED
-            - PAYMENT_SUCCEEDED
-            - PAYMENT_FAILED
-            - PAYMENT_TIMED_OUT
-            - PAYMENT_REFUNDED
-        paidAt:
-          type: string
-          format: date-time
-          nullable: true
-    RequestRefundRequest:
-      type: object
-      required:
-        - reason
-      properties:
-        reason:
-          type: string
-    AsyncOperationApiResponse:
-      type: object
-      required:
-        - success
-        - code
-        - message
-        - data
-        - timestamp
-      properties:
-        success:
-          type: boolean
-          example: true
-        code:
-          type: string
-          example: ACCEPTED
-        message:
-          type: string
-          example: Yêu cầu đã được tiếp nhận và xử lý bất đồng bộ.
-        data:
-          $ref: '#/components/schemas/AsyncOperationAccepted'
-        timestamp:
-          type: string
-          format: date-time
-          example: '2026-08-13T08:00:00.000Z'
-    AsyncOperationAccepted:
-      type: object
-      description: Response chuẩn cho mọi write đi qua nhiều Bounded Context (HA-first).
-      required:
-        - resourceId
-        - status
-        - submittedAt
-      properties:
-        resourceId:
-          type: string
-          format: uuid
-          description: ID của Registration/Refund vừa khởi tạo.
-        status:
-          type: string
-          example: REGISTRATION_PENDING
-        statusCheckUrl:
-          type: string
-          format: uri
-        submittedAt:
-          type: string
-          format: date-time
-    VnpayWebhookPayload:
-      type: object
-      description: Payload chuẩn VNPay IPN (rút gọn, minh họa ACL đầu vào).
-      properties:
-        vnp_TxnRef:
-          type: string
-        vnp_ResponseCode:
-          type: string
-          example: '00'
-        vnp_Amount:
-          type: string
-        vnp_TransactionNo:
-          type: string
-        vnp_SecureHash:
-          type: string
-    MomoWebhookPayload:
-      type: object
-      properties:
-        orderId:
-          type: string
-        requestId:
-          type: string
-        resultCode:
-          type: integer
-        amount:
-          type: integer
-        signature:
-          type: string
     ErrorResponse:
       type: object
       description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).

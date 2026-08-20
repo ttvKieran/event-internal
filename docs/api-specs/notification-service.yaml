@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 servers:
   - url: https://api.events.internal.company.vn/v1
-    description: Production (qua API Gateway, mục 3.1 Context Map)
+    description: Production (qua API Gateway)
   - url: https://api.events.staging.company.vn/v1
     description: Staging
 paths:
@@ -18,7 +18,7 @@ components:
   schemas:
     ErrorResponse:
       type: object
-      description: Envelope Response DTO dùng chung cho mọi API lỗi (Trường phái B).
+      description: Envelope Response DTO dùng chung cho mọi API lỗi.
       required:
         - success
         - code
@@ -44,99 +44,4 @@ components:
           example: "2026-08-13T08:00:00.000Z"
         path:
           type: string
-          example: /v1/auth/login
-  responses:
-    BadRequest:
-      description: Dữ liệu đầu vào không hợp lệ.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            success: false
-            code: BAD_REQUEST
-            message: Dữ liệu đầu vào không hợp lệ.
-            data: null
-            timestamp: "2026-08-13T08:00:00.000Z"
-            path: /v1/api
-    Unauthorized:
-      description: Thiếu hoặc JWT không hợp lệ.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            success: false
-            code: UNAUTHORIZED
-            message: Xác thực không thành công hoặc JWT hết hạn.
-            data: null
-            timestamp: "2026-08-13T08:00:00.000Z"
-            path: /v1/api
-    Forbidden:
-      description: Role JWT không đủ quyền (vd. cần ORGANIZER).
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            success: false
-            code: FORBIDDEN
-            message: Tài khoản không đủ quyền truy cập tài nguyên này.
-            data: null
-            timestamp: "2026-08-13T08:00:00.000Z"
-            path: /v1/api
-    NotFound:
-      description: Không tìm thấy tài nguyên.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            success: false
-            code: NOT_FOUND
-            message: Tài nguyên được yêu cầu không tồn tại.
-            data: null
-            timestamp: "2026-08-13T08:00:00.000Z"
-            path: /v1/api
-    Conflict:
-      description: Xung đột trạng thái (vd. đã PUBLISHED).
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            success: false
-            code: CONFLICT
-            message: Xung đột trạng thái tài nguyên.
-            data: null
-            timestamp: "2026-08-13T08:00:00.000Z"
-            path: /v1/api
-  parameters:
-    ResourceId:
-      name: resourceId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    EventId:
-      name: eventId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    RegistrationId:
-      name: registrationId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    PaymentId:
-      name: paymentId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
+          example: /v1/health
