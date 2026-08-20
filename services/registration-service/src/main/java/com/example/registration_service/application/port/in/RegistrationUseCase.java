@@ -17,4 +17,7 @@ public interface RegistrationUseCase {
     Registration getRegistrationById(UUID registrationId);
     List<Registration> getRegistrations(UUID campaignId, UUID userId, RegistrationStatus status);
     int countActiveRegistrations(UUID campaignId);
+    void reserveTicketAsync(ReserveTicketDTO command);
+    String getReservationStatus(UUID campaignId, UUID userId);
+    void processAsyncReservation(ReserveTicketDTO command);
 }

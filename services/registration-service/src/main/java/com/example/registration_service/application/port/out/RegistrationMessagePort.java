@@ -1,5 +1,6 @@
 package com.example.registration_service.application.port.out;
 
+import com.example.registration_service.application.dto.ReserveTicketDTO;
 import com.example.registration_service.domain.model.aggregate.Registration;
 
 public interface RegistrationMessagePort {
@@ -21,4 +22,9 @@ public interface RegistrationMessagePort {
      → Notification Service lắng nghe để gửi email thông báo hủy vé.
      */
     void publishPaidRegistrationRolledBack(Registration registration, String reason);
+
+    /**
+     * Bắn lệnh đặt vé vào Outbox để Worker tự động xử lý dần ở background.
+     */
+    void publishAsyncReserveTicketCommand(ReserveTicketDTO command);
 }

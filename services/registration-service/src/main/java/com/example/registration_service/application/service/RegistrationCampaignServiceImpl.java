@@ -1,6 +1,7 @@
 package com.example.registration_service.application.service;
 
 import com.example.registration_service.application.port.in.RegistrationCampaignUseCase;
+import com.example.registration_service.application.port.out.TicketCachePort;
 import com.example.registration_service.domain.model.aggregate.RegistrationCampaign;
 import com.example.registration_service.domain.model.valueobject.CampaignStatus;
 import com.example.registration_service.domain.model.valueobject.RegistrationTimeWindow;
@@ -19,6 +20,7 @@ import java.util.UUID;
 public class RegistrationCampaignServiceImpl implements RegistrationCampaignUseCase {
 
     private final RegistrationCampaignRepository campaignRepo;
+    private final TicketCachePort ticketCachePort;
 
     @Override
     @Transactional
@@ -28,6 +30,7 @@ public class RegistrationCampaignServiceImpl implements RegistrationCampaignUseC
         RegistrationCampaign campaign = RegistrationCampaign.createSnapshot(
             campaignId, TicketType.of(ticketTypeCode), maxParticipants, price,timeWindow
         );
+        ticketCachePort.initializeTicketCache(campaignId, maxParticipants);
         campaignRepo.save(campaign);
     }
 

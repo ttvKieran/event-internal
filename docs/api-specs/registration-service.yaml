@@ -63,11 +63,10 @@ paths:
         - Registration
       summary: Đăng ký tham gia sự kiện (RegisterForEvent)
       description:
-        "**Hybrid Saga**: Bước 1 của luồng đăng ký. 
-        API này hoạt động ĐỒNG BỘ: Giữ chỗ (hold slot) bên Resource Context và gọi Payment Context để tạo mã thanh toán (nếu là vé PAID). 
-        Trả về `201 Created` ngay lập tức kèm theo `paymentUrl` (nếu có).
+        "**BẤT ĐỒNG BỘ (Flash Sale)**: Bước 1 của luồng đăng ký siêu tốc. 
+        API này hoạt động theo cơ chế kiểm tra vé trên Redis và trả về `202 Accepted` ngay lập tức nếu còn vé (Fast Path).
         
-        Bước 2 (Hoàn tất/Hủy) sẽ được xử lý BẤT ĐỒNG BỘ qua Kafka (Saga) khi nhận Webhook từ ngân hàng hoặc khi hết hạn timeout giữ vé.
+        Bước 2 (Chốt vé/Giao tiếp DB) sẽ được xử lý ngầm qua Debezium Outbox và Kafka Worker. Frontend cần gọi API GET `/registrations/status` để theo dõi tiến trình.
         "
       operationId: registerForEvent
       requestBody:
@@ -77,12 +76,12 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterForEventRequest"
       responses:
-        "201":
-          description: Yêu cầu đăng ký đã được tiếp nhận, trả về link thanh toán (nếu vé PAID).
+        "202":
+          description: Yêu cầu đã được tiếp nhận và đưa vào hàng đợi xử lý.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReserveTicketApiResponse"
+                $ref: "#/components/schemas/AsyncOperationApiResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
     get:
@@ -115,6 +114,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RegistrationListApiResponse"
+  /registrations/status:
+    get:
+      tags:
+        - Registration
+      summary: Polling trạng thái xử lý đơn đăng ký (Flash Sale)
+      description: |
+        Frontend gọi định kỳ (VD: mỗi 2s) sau khi nhận được 202 Accepted từ API đăng ký để lấy trạng thái xử lý thực tế từ Redis.
+      operationId: checkRegistrationStatus
+      parameters:
+        - name: campaignId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Trả về trạng thái của giao dịch (PENDING, SUCCESS:..., FAILED:...)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  code:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+                    example: Thành công
+                  data:
+                    type: string
+                    example: "SUCCESS:123e4567-e89b-12d3-a456-426614174000"
   /registrations/{registrationId}:
     get:
       tags:

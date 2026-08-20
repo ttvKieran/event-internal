@@ -3,6 +3,7 @@ package com.example.registration_service.application.service;
 import com.example.registration_service.application.dto.ReserveTicketDTO;
 import com.example.registration_service.application.port.in.RegistrationUseCase;
 import com.example.registration_service.application.port.out.RegistrationMessagePort;
+import com.example.registration_service.application.port.out.TicketCachePort;
 import com.example.registration_service.domain.model.aggregate.Registration;
 import com.example.registration_service.domain.model.aggregate.RegistrationCampaign;
 import com.example.registration_service.domain.model.valueobject.CampaignStatus;
@@ -26,6 +27,7 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
     private final RegistrationCampaignRepository campaignRepo;
     private final RegistrationRepository registrationRepo;
     private final RegistrationMessagePort messagePort;
+     private final TicketCachePort ticketCachePort;
 
     @Override
     @Transactional
@@ -117,5 +119,37 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
     @Override
     public int countActiveRegistrations(UUID campaignId) {
         return registrationRepo.countActiveRegistrations(campaignId);
+    }
+
+    @Override
+    @Transactional
+    public void reserveTicketAsync(ReserveTicketDTO command) {
+        RegistrationCampaign campaign = campaignRepo.findById(command.getCampaignId())
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện"));
+
+        campaign.reserveTicket(LocalDateTime.now());
+        boolean isAvailable = ticketCachePort.decrementTicket(command.getCampaignId());
+        if (!isAvailable) {
+            throw new IllegalStateException("Rất tiếc, sự kiện đã bán hết vé!");
+        }
+        ticketCachePort.setReservationStatus(command.getCampaignId(), command.getUserId(), "PENDING");
+        messagePort.publishAsyncReserveTicketCommand(command);
+    }
+
+    @Override
+    public String getReservationStatus(UUID campaignId, UUID userId) {
+        String status = ticketCachePort.getReservationStatus(campaignId, userId);
+        if (status == null) return "NOT_FOUND";
+        return status;
+    }
+
+    @Override
+    public void processAsyncReservation(ReserveTicketDTO command) {
+        try {
+            UUID registrationId = this.reserveTicket(command);
+            ticketCachePort.setReservationStatus(command.getCampaignId(), command.getUserId(), "SUCCESS:" + registrationId);
+        } catch (Exception e) {
+            ticketCachePort.setReservationStatus(command.getCampaignId(), command.getUserId(), "FAILED:" + e.getMessage());
+        }
     }
 }
