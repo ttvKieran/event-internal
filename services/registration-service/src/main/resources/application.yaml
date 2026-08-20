@@ -41,3 +41,15 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+resilience4j:
+  bulkhead:
+    instances:
+      reserveTicketBulkhead:
+        maxConcurrentCalls: 50
+        maxWaitDuration: 0ms
