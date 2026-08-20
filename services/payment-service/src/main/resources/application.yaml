@@ -49,6 +49,8 @@ payment:
   expiration:
     timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:15} # Thời gian giữ vé tối đa
     scheduler-cron: ${PAYMENT_SCHEDULER_CRON:0 */5 * * * *} # Tần suất quét hết hạn
+  frontend-result-url: ${FRONTEND_PAYMENT_RESULT_URL:http://localhost:5173/payment/result}
+
 
 # Cấu hình cổng thanh toán VNPay
 vnpay:

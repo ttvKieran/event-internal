@@ -2,6 +2,9 @@ package com.example.payment_service.application.port.in;
 
 import com.example.payment_service.application.dto.command.VnPayIpnCommand;
 import com.example.payment_service.application.dto.message.RegistrationRequestedPayload;
+import com.example.payment_service.domain.model.aggregate.PaymentTransaction;
+
+import java.util.UUID;
 
 public interface PaymentUseCase {
 
@@ -22,4 +25,6 @@ public interface PaymentUseCase {
      * Quét giao dịch PENDING quá 15 phút → markAsExpired() → Bắn PaymentFailedEvent.
      */
     void expireStalePayments();
+
+    PaymentTransaction getPaymentByRegistrationId(UUID registrationId);
 }
