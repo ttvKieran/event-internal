@@ -90,6 +90,7 @@ composer.lock
 dist/
 build/
 out/
+!**/port/out/
 *.log
 coverage/
 .nyc_output/
