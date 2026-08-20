@@ -6,5 +6,6 @@ import java.util.UUID;
 
 public interface RegistrationCampaignRepository {
     Optional<RegistrationCampaign> findById(UUID campaignId);
+    Optional<RegistrationCampaign> findByIdForUpdate(UUID campaignId);
     void save(RegistrationCampaign campaign);
 }

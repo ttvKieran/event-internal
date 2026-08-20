@@ -30,7 +30,7 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
     @Override
     @Transactional
     public UUID reserveTicket(ReserveTicketDTO command) {
-        RegistrationCampaign campaign = campaignRepo.findById(command.getCampaignId())
+        RegistrationCampaign campaign = campaignRepo.findByIdForUpdate(command.getCampaignId())
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
 
         // Có còn chỗ không? Có đúng giờ không?

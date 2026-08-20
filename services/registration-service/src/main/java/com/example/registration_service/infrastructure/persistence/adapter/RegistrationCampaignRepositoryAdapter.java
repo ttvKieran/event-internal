@@ -29,4 +29,10 @@ public class RegistrationCampaignRepositoryAdapter implements RegistrationCampai
         RegistrationCampaignEntity entity = mapper.toEntity(campaign);
         jpaRepository.save(entity);
     }
+
+    @Override
+    public Optional<RegistrationCampaign> findByIdForUpdate(UUID campaignId) {
+        return jpaRepository.findByIdForUpdate(campaignId)
+            .map(mapper::toDomain);
+    }
 }

@@ -10,7 +10,8 @@ public enum ApiErrorCode {
     FORBIDDEN("FORBIDDEN", "Tài khoản không đủ quyền truy cập tài nguyên này"),
     NOT_FOUND("NOT_FOUND", "Tài nguyên được yêu cầu không tồn tại"),
     CONFLICT("CONFLICT", "Xung đột trạng thái tài nguyên"),
-    INTERNAL_SERVER_ERROR("INTERNAL_ERROR", "Lỗi hệ thống nội bộ");
+    INTERNAL_SERVER_ERROR("INTERNAL_ERROR", "Lỗi hệ thống nội bộ"),
+    SERVICE_UNAVAILABLE("SERVICE_UNAVAILABLE", "Hệ thống đang quá tải hoặc bảo trì");
 
     private final String code;
     private final String defaultMessage;
