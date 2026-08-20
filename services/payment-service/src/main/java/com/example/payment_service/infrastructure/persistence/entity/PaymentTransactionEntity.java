@@ -40,6 +40,6 @@ public class PaymentTransactionEntity extends BaseEntity {
     @Column(length = 100)
     private String providerTxnId; // Mã giao dịch VNPay cấp (null khi còn PENDING)
 
-    @Column(length = 500)
+    @Column(length = 1000)
     private String paymentUrl;    // Link QR thanh toán
 }

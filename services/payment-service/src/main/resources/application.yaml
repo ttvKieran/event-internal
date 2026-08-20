@@ -2,6 +2,8 @@ server:
   port: ${PAYMENT_SERVICE_PORT:8084}
 
 spring:
+  config:
+    import: "optional:file:.env[.properties]"
   application:
     name: payment-service
 
@@ -45,5 +47,13 @@ spring:
 # Nghiệp vụ thanh toán
 payment:
   expiration:
-    timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:15}        # Thời gian giữ vé tối đa
-    scheduler-cron: ${PAYMENT_SCHEDULER_CRON:0 */5 * * * *}  # Tần suất quét hết hạn
+    timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:15} # Thời gian giữ vé tối đa
+    scheduler-cron: ${PAYMENT_SCHEDULER_CRON:0 */5 * * * *} # Tần suất quét hết hạn
+
+# Cấu hình cổng thanh toán VNPay
+vnpay:
+  pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+  tmn-code: ${VNPAY_TMN_CODE:YOUR_TMN_CODE_HERE}
+  hash-secret: ${VNPAY_HASH_SECRET:YOUR_HASH_SECRET_HERE}
+  return-url: ${VNPAY_RETURN_URL:http://localhost:8084/api/v1/payments/vnpay-return}
+  ipn-url: ${VNPAY_IPN_URL:http://localhost:8084/api/v1/payments/vnpay-ipn}

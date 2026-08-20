@@ -2,14 +2,13 @@ package com.example.payment_service.presentation.rest;
 
 import com.example.payment_service.application.dto.command.VnPayIpnCommand;
 import com.example.payment_service.application.port.in.PaymentUseCase;
+import com.example.payment_service.application.port.out.PaymentGatewayPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -19,39 +18,43 @@ import java.util.Map;
 public class PaymentController {
 
     private final PaymentUseCase paymentUseCase;
-    /**
-     * VNPay gọi ngầm vào đây sau khi xử lý thanh toán (IPN — Instant Payment Notification).
-     * User không thấy endpoint này, chỉ VNPay server gọi trực tiếp
-     * VNPay quy định phải trả về JSON: {"RspCode":"00","Message":"Confirm Success"} nếu xử lý thành công, các mã lỗi khác nếu thất bại.
-     */
-    @GetMapping("/vnpay-ipn")
-    public ResponseEntity<Map<String, String>> vnPayIpn(
-        @RequestParam("vnp_TxnRef")       String vnpTxnRef,        // = registrationId
-        @RequestParam("vnp_TransactionNo") String vnpTransactionNo, // Mã giao dịch VNPay
-        @RequestParam("vnp_ResponseCode")  String vnpResponseCode,  // "00" = OK
-        @RequestParam("vnp_SecureHash")    String vnpSecureHash     // Chữ ký bảo mật
-    ) {
-        log.info("[Payment] Nhận IPN từ VNPay: txnRef={}, responseCode={}", vnpTxnRef, vnpResponseCode);
+    private final PaymentGatewayPort paymentGatewayPort;
 
+    /**
+     * Nhận kết quả từ VNPay khi trình duyệt khách hàng được redirect về.
+     * Thực hiện nghiệp vụ (Cập nhật DB, bắn Kafka) (Bỏ qua IPN vì chưa cấu hình được ipn).
+     */
+    @GetMapping("/vnpay-return")
+    public ResponseEntity<Map<String, String>> vnpayReturn(@RequestParam Map<String, String> allParams) {
+        log.info("[Payment] Nhận Return URL từ VNPay: {}", allParams);
         try {
-            // TODO: Xác thực chữ ký vnpSecureHash trước khi xử lý
-            // if (!vnPayService.validateSignature(request)) return badSignature();
+            Map<String, String> vnpParams = new HashMap<>();
+            for (Map.Entry<String, String> entry : allParams.entrySet()) {
+                if (entry.getKey().startsWith("vnp_")) {
+                    vnpParams.put(entry.getKey(), entry.getValue());
+                }
+            }
+            if (!paymentGatewayPort.verifyIpnSignature(vnpParams)) {
+                log.warn("[Payment] VNPay Return có chữ ký KHÔNG hợp lệ!");
+                return ResponseEntity.badRequest().body(Map.of("message", "Chữ ký không hợp lệ"));
+            }
+            String vnpTxnRef = vnpParams.get("vnp_TxnRef");
+            String vnpTransactionNo = vnpParams.get("vnp_TransactionNo");
+            String vnpResponseCode = vnpParams.get("vnp_ResponseCode");
 
             VnPayIpnCommand command = new VnPayIpnCommand(vnpTxnRef, vnpTransactionNo, vnpResponseCode);
+
             paymentUseCase.handleVnPayIpn(command);
 
-            // VNPay yêu cầu trả về theo format
-            return ResponseEntity.ok(Map.of(
-                "RspCode", "00",
-                "Message", "Confirm Success"
-            ));
+            if ("00".equals(vnpResponseCode)) {
+                return ResponseEntity.ok(Map.of("message", "Thanh toán VNPay thành công!", "orderId", vnpTxnRef));
+            } else {
+                return ResponseEntity.ok(Map.of("message", "Thanh toán VNPay thất bại hoặc bị huỷ.", "orderId", vnpTxnRef));
+            }
 
         } catch (Exception e) {
-            log.error("[Payment] Lỗi xử lý IPN VNPay: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of(
-                "RspCode", "99",
-                "Message", "Internal Error"
-            ));
+            log.error("[Payment] Lỗi khi xử lý VNPay Return: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Lỗi hệ thống"));
         }
     }
 }
