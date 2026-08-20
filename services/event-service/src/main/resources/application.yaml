@@ -35,6 +35,14 @@ spring:
         # Không tự động gán metadata về Type (Tên Class) vào JSON header
         spring.json.add.type.headers: false
 
+  cloud:
+    openfeign:
+      client:
+        config:
+          registration-service:
+            connectTimeout: 2000
+            readTimeout: 3000
+
 # Cấu hình Bien môi trường
 services:
   registration:
@@ -56,10 +64,14 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: false # lưu mốc ngắt mạch khi nào có req tơi mới kiểm tra thời gian so với thời gian lưu mốc
         ignoreExceptions:
           - feign.FeignException$FeignClientException   # lỗi 4xx không tính là circuit breaker failure
-  timelimiter:
+  bulkhead:
     instances:
       registrationCB:
-        timeoutDuration: 3s               # chặn call treo quá lâu
+        maxConcurrentCalls: 15
+        maxWaitDuration: 0ms
+resilience4j.circuitbreaker.circuit-breaker-aspect-order: 1
+resilience4j.bulkhead.bulkhead-aspect-order: 2
+
 management:
   endpoints:
     web:
