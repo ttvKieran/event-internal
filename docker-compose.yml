@@ -13,83 +13,83 @@ services:
   #    networks:
   #      - app-network
   #
-  #  # ─── API Gateway ─────────────────────────────────
-  #  gateway:
-  #    build: ./gateway
-  #    container_name: gateway
-  #    ports:
-  #      - "${GATEWAY_PORT:-8000}:8000"
-  #    depends_on:
-  #      - iam-service
-  #    environment:
-  #      - IAM_SERVICE_URL=http://iam-service:8085
-  #      - ATTENDANCE_SERVICE_URL=http://attendance-service:8086
-  #      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
-  #    networks:
-  #      - app-network
-  #
-  #  # ─── IAM Service ─────────────────────────────────
-  #  iam-service:
-  #    build: ./services/iam-service
-  #    container_name: iam-service
-  #    ports:
-  #      - "${IAM_SERVICE_PORT:-8085}:8085"
-  #    depends_on:
-  #      - iam-db
-  #    environment:
-  #      - SPRING_DATASOURCE_URL=jdbc:postgresql://iam-db:5432/${IAM_DB_NAME:-employee_db}
-  #      - DB_USERNAME=${IAM_DB_USER:-postgres}
-  #      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
-  #      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
-  #      - SPRING_SQL_INIT_MODE=always
-  #    networks:
-  #      - app-network
-  #
-  #  # ─── Database for IAM ────────────────────────────
-  #  iam-db:
-  #    image: quay.io/debezium/postgres:16
-  #    container_name: iam-db
-  #    ports:
-  #      - "${IAM_DB_PORT:-5434}:5432"
-  #    environment:
-  #      POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
-  #      POSTGRES_USER: ${IAM_DB_USER:-postgres}
-  #      POSTGRES_PASSWORD: ${IAM_DB_PASSWORD:-postgres}
-  #    volumes:
-  #      - iam-db-data:/var/lib/postgresql/data
-  #    networks:
-  #      - app-network
-  #
-  #  # ─── Attendance Service ─────────────────────────────────
-  #  attendance-service:
-  #    build: ./services/attendance-service
-  #    container_name: attendance-service
-  #    ports:
-  #      - "${ATTENDANCE_SERVICE_PORT:-8086}:8086"
-  #    depends_on:
-  #      - attendance-db
-  #    environment:
-  #      - SPRING_DATASOURCE_URL=jdbc:postgresql://attendance-db:5432/${ATTENDANCE_DB_NAME:-attendance_db}
-  #      - DB_USERNAME=${ATTENDANCE_DB_USER:-postgres}
-  #      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
-  #      - SPRING_SQL_INIT_MODE=always
-  #    networks:
-  #      - app-network
-  #
-  #  # ─── Database for IAM ────────────────────────────
-  #  attendance-db:
-  #    image: quay.io/debezium/postgres:16
-  #    container_name: attendance-db
-  #    ports:
-  #      - "${ATTENDANCE_DB_PORT:-5435}:5432"
-  #    environment:
-  #      POSTGRES_DB: ${ATTENDANCE_DB_NAME:-attendance_db}
-  #      POSTGRES_USER: ${ATTENDANCE_DB_USER:-postgres}
-  #      POSTGRES_PASSWORD: ${ATTENDANCE_DB_PASSWORD:-postgres}
-  #    volumes:
-  #      - attendance-db-data:/var/lib/postgresql/data
-  #    networks:
-  #      - app-network
+    # ─── API Gateway ─────────────────────────────────
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      - iam-service
+    environment:
+      - IAM_SERVICE_URL=http://iam-service:8085
+      - ATTENDANCE_SERVICE_URL=http://attendance-service:8086
+      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
+    networks:
+      - app-network
+
+  # ─── IAM Service ─────────────────────────────────
+  iam-service:
+    build: ./services/iam-service
+    container_name: iam-service
+    ports:
+      - "${IAM_SERVICE_PORT:-8085}:8085"
+    depends_on:
+      - iam-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://iam-db:5432/${IAM_DB_NAME:-employee_db}
+      - DB_USERNAME=${IAM_DB_USER:-postgres}
+      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
+      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
+      - SPRING_SQL_INIT_MODE=always
+    networks:
+      - app-network
+
+  # ─── Database for IAM ────────────────────────────
+  iam-db:
+    image: quay.io/debezium/postgres:16
+    container_name: iam-db
+    ports:
+      - "${IAM_DB_PORT:-5434}:5432"
+    environment:
+      POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
+      POSTGRES_USER: ${IAM_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${IAM_DB_PASSWORD:-postgres}
+    volumes:
+      - iam-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # ─── Attendance Service ─────────────────────────────────
+  attendance-service:
+    build: ./services/attendance-service
+    container_name: attendance-service
+    ports:
+      - "${ATTENDANCE_SERVICE_PORT:-8086}:8086"
+    depends_on:
+      - attendance-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://attendance-db:5432/${ATTENDANCE_DB_NAME:-attendance_db}
+      - DB_USERNAME=${ATTENDANCE_DB_USER:-postgres}
+      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
+      - SPRING_SQL_INIT_MODE=always
+    networks:
+      - app-network
+
+  # ─── Database for IAM ────────────────────────────
+  attendance-db:
+    image: quay.io/debezium/postgres:16
+    container_name: attendance-db
+    ports:
+      - "${ATTENDANCE_DB_PORT:-5435}:5432"
+    environment:
+      POSTGRES_DB: ${ATTENDANCE_DB_NAME:-attendance_db}
+      POSTGRES_USER: ${ATTENDANCE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ATTENDANCE_DB_PASSWORD:-postgres}
+    volumes:
+      - attendance-db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   # ─── Event Service ────────────────────────────────
   event-service:
@@ -98,8 +98,10 @@ services:
     ports:
       - "${EVENT_SERVICE_PORT:-8082}:8082"
     depends_on:
-      - event-db
-      - kafka
+      event-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
       - DB_HOST=event-db
       - DB_PORT=5432
@@ -118,9 +120,12 @@ services:
     ports:
       - "${REGISTRATION_SERVICE_PORT:-8083}:8083"
     depends_on:
-      - registration-db
-      - redis
-      - kafka
+      registration-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - DB_HOST=registration-db
       - REGISTRATION_DB_PORT=5432
@@ -140,8 +145,12 @@ services:
     ports:
       - "${PAYMENT_SERVICE_PORT:-8084}:8084"
     depends_on:
-      - payment-db
-      - kafka
+      payment-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - DB_HOST=payment-db
       - PAYMENT_DB_PORT=5432
@@ -165,8 +174,12 @@ services:
     ports:
       - "${NOTIFICATION_SERVICE_PORT:-8088}:8087"
     depends_on:
-      - notification-db
-      - kafka
+      notification-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - DB_HOST=notification-db
       - NOTIFICATION_DB_PORT=5432
@@ -188,6 +201,11 @@ services:
       POSTGRES_DB: ${DB_NAME:-event_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - event-db-data:/var/lib/postgresql/data
     networks:
@@ -201,6 +219,11 @@ services:
       POSTGRES_DB: ${REGISTRATION_DB_NAME:-registration_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - registration_db_data:/var/lib/postgresql/data
     networks:
@@ -214,6 +237,11 @@ services:
       POSTGRES_DB: ${PAYMENT_DB_NAME:-payment_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - payment_db_data:/var/lib/postgresql/data
     networks:
@@ -227,6 +255,11 @@ services:
       POSTGRES_DB: ${NOTIFICATION_DB_NAME:-notification_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - notification_db_data:/var/lib/postgresql/data
     networks:
@@ -265,6 +298,12 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
       - zookeeper
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
@@ -320,26 +359,27 @@ services:
     networks:
       - app-network
 
-  #  debezium-init-iam:
-  #    image: curlimages/curl:latest
-  #    environment:
-  #      - DB_USER=${IAM_DB_USER:-postgres}
-  #      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
-  #      - DB_NAME=${IAM_DB_NAME:-employee_db}
-  #      - DB_HOST=iam-db
-  #      - DB_PORT=5432
-  #      - DEBEZIUM_HOST=debezium
-  #      - DEBEZIUM_PORT=8083
-  #      - CONNECTOR_NAME=iam-outbox-connector
-  #      - TOPIC_PREFIX=vtit
-  #      - TABLE_INCLUDE_LIST=public.outbox_events
-  #      - ROUTE_TOPIC_REPLACEMENT=Iam
-  #    volumes:
-  #      - ./scripts:/scripts:ro
-  #    command: [ "sh", "/scripts/debezium/register-iam-connector.sh" ]
-  #    depends_on:
-  #      - debezium
-  #      - iam-db
+  debezium-init-iam:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${IAM_DB_USER:-postgres}
+      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
+      - DB_NAME=${IAM_DB_NAME:-employee_db}
+      - DB_HOST=iam-db
+      - DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=iam-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Iam
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-iam-connector.sh" ]
+    depends_on:
+      - debezium
+      - iam-db
+
   registration-debezium-init:
     image: curlimages/curl:latest
     environment:
@@ -364,26 +404,27 @@ services:
     networks:
       - app-network
 
-  #  debezium-init-attendance:
-  #    image: curlimages/curl:latest
-  #    environment:
-  #      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
-  #      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
-  #      - DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
-  #      - DB_HOST=attendance-db
-  #      - DB_PORT=5432
-  #      - DEBEZIUM_HOST=debezium
-  #      - DEBEZIUM_PORT=8083
-  #      - CONNECTOR_NAME=attendance-outbox-connector
-  #      - TOPIC_PREFIX=vtit
-  #      - TABLE_INCLUDE_LIST=public.outbox_events
-  #      - ROUTE_TOPIC_REPLACEMENT=Attendance
-  #    volumes:
-  #      - ./scripts:/scripts:ro
-  #    command: [ "sh", "/scripts/debezium/register-attendance-connector.sh" ]
-  #    depends_on:
-  #      - debezium
-  #      - attendance-db
+  debezium-init-attendance:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
+      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
+      - DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
+      - DB_HOST=attendance-db
+      - DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=attendance-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Attendance
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-attendance-connector.sh" ]
+    depends_on:
+      - debezium
+      - attendance-db
+
   payment-debezium-init:
     image: curlimages/curl:latest
     environment:
