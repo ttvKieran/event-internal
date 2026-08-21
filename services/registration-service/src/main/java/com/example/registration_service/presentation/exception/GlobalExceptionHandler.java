@@ -1,5 +1,6 @@
 package com.example.registration_service.presentation.exception;
 
+import com.example.registration_service.presentation.dto.response.ApiResponse;
 import com.example.registration_service.presentation.dto.response.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,22 @@ public class GlobalExceptionHandler {
             .path(request.getRequestURI())
             .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler({
+        org.springframework.dao.CannotAcquireLockException.class,
+        jakarta.persistence.PessimisticLockException.class
+    })
+    public ResponseEntity<ErrorResponseDTO> handleLockTimeout(Exception ex, HttpServletRequest request) {
+        log.warn("Database Lock Timeout - Path: {}, Message: {}", request.getRequestURI(), ex.getMessage());
+
+        ErrorResponseDTO error = ErrorResponseDTO.builder()
+            .code(ApiErrorCode.SERVICE_UNAVAILABLE.getCode())
+            .message("Hệ thống đang nghẽn do quá nhiều người đặt vé. Vui lòng thử lại sau vài giây!")
+            .path(request.getRequestURI())
+            .build();
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
     // Bắt toàn bộ các Exception không lường trước được (tránh crash hoặc lộ stacktrace)

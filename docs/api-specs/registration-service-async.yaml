@@ -28,6 +28,7 @@ channels:
         oneOf:
           - $ref: '#/components/messages/ConfirmPaidRegistrationCommand'
           - $ref: '#/components/messages/RollbackPaidRegistrationCommand'
+          - $ref: '#/components/messages/AsyncReserveTicketCommand'
   Event:
     description: 'Lắng nghe các sự kiện từ Event Service để đồng bộ dữ liệu (Event Choreography). Khớp 100% với file EventKafkaListener.java.'
     subscribe:
@@ -135,6 +136,23 @@ components:
           enum:
             - PAYMENT_FAILED
             - PAYMENT_TIMED_OUT
+    AsyncReserveTicketCommandPayload:
+      type: object
+      required:
+        - campaignId
+        - userId
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        provider:
+          type: object
+          properties:
+            code:
+              type: string
     PaymentSucceededEventPayload:
       type: object
       properties:
@@ -218,6 +236,15 @@ components:
         - $ref: '#/components/messageTraits/commandTrait'
       payload:
         $ref: '#/components/schemas/RollbackPaidRegistrationCommandPayload'
+    AsyncReserveTicketCommand:
+      messageId: AsyncReserveTicketCommand
+      name: AsyncReserveTicketCommand
+      title: AsyncReserveTicketCommand
+      summary: Lệnh khởi tạo vé không đồng bộ được dội ngược từ Outbox (Flash Sale Fast Path).
+      traits:
+        - $ref: '#/components/messageTraits/commandTrait'
+      payload:
+        $ref: '#/components/schemas/AsyncReserveTicketCommandPayload'
     PaymentSucceededEvent:
       messageId: PaymentSucceededEvent
       name: PaymentSucceededEvent

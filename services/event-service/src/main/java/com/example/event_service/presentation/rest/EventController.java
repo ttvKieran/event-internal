@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,6 +24,20 @@ public class EventController {
     private final EventUseCase eventUseCase;
 
     private final EventApiMapper mapper;
+
+    // Lấy danh sách sự kiện
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<EventResponseDTO>>> getEvents(
+        @RequestParam(required = false) String status,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
+        java.util.List<EventDetailsDTO> appResults = eventUseCase.getEvents(status, page, size);
+
+        java.util.List<EventResponseDTO> responseList = appResults.stream()
+            .map(mapper::toResponseDto)
+            .toList();
+        return ResponseEntity.ok(ApiResponse.ok(responseList));
+    }
 
     // Tạo sự kiện
     @PostMapping

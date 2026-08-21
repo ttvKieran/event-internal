@@ -4,6 +4,17 @@
 
 services:
   # ─── API Gateway ─────────────────────────────────
+  #  # ─── Frontend ────────────────────────────────────
+  #  frontend:
+  #    build: ./frontend
+  #    ports:
+  #      - "${FRONTEND_PORT:-3000}:3000"
+  #    depends_on:
+  #      - gateway
+  #    networks:
+  #      - app-network
+  #
+    # ─── API Gateway ─────────────────────────────────
   gateway:
     build: ./gateway
     container_name: gateway

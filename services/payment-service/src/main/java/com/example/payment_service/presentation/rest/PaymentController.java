@@ -2,15 +2,22 @@ package com.example.payment_service.presentation.rest;
 
 import com.example.payment_service.application.dto.command.VnPayIpnCommand;
 import com.example.payment_service.application.port.in.PaymentUseCase;
+import com.example.payment_service.application.port.out.PaymentGatewayPort;
+import com.example.payment_service.domain.model.aggregate.PaymentTransaction;
+import com.example.payment_service.presentation.dto.response.ApiResponse;
+import com.example.payment_service.presentation.dto.response.PaymentResponseDTO;
+import com.example.payment_service.presentation.mapper.PaymentApiMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -19,39 +26,50 @@ import java.util.Map;
 public class PaymentController {
 
     private final PaymentUseCase paymentUseCase;
+    private final PaymentGatewayPort paymentGatewayPort;
+    private final PaymentApiMapper paymentMapper;
+    @Value("${payment.frontend-result-url:http://localhost:5173/payment/result}")
+    private String frontendResultUrl;
+
     /**
-     * VNPay gọi ngầm vào đây sau khi xử lý thanh toán (IPN — Instant Payment Notification).
-     * User không thấy endpoint này, chỉ VNPay server gọi trực tiếp
-     * VNPay quy định phải trả về JSON: {"RspCode":"00","Message":"Confirm Success"} nếu xử lý thành công, các mã lỗi khác nếu thất bại.
+     * Nhận kết quả từ VNPay khi trình duyệt khách hàng được redirect về.
+     * Thực hiện nghiệp vụ (Cập nhật DB, bắn Kafka) (Bỏ qua IPN vì chưa cấu hình được ipn).
      */
-    @GetMapping("/vnpay-ipn")
-    public ResponseEntity<Map<String, String>> vnPayIpn(
-        @RequestParam("vnp_TxnRef")       String vnpTxnRef,        // = registrationId
-        @RequestParam("vnp_TransactionNo") String vnpTransactionNo, // Mã giao dịch VNPay
-        @RequestParam("vnp_ResponseCode")  String vnpResponseCode,  // "00" = OK
-        @RequestParam("vnp_SecureHash")    String vnpSecureHash     // Chữ ký bảo mật
-    ) {
-        log.info("[Payment] Nhận IPN từ VNPay: txnRef={}, responseCode={}", vnpTxnRef, vnpResponseCode);
-
+    @GetMapping("/vnpay-return")
+    public ResponseEntity<Void> vnpayReturn(@RequestParam Map<String, String> allParams) {
+        log.info("[Payment] Nhận Return URL từ VNPay: {}", allParams);
+        String vnpTxnRef = allParams.get("vnp_TxnRef");
+        String vnpResponseCode = allParams.get("vnp_ResponseCode");
         try {
-            // TODO: Xác thực chữ ký vnpSecureHash trước khi xử lý
-            // if (!vnPayService.validateSignature(request)) return badSignature();
-
-            VnPayIpnCommand command = new VnPayIpnCommand(vnpTxnRef, vnpTransactionNo, vnpResponseCode);
-            paymentUseCase.handleVnPayIpn(command);
-
-            // VNPay yêu cầu trả về theo format
-            return ResponseEntity.ok(Map.of(
-                "RspCode", "00",
-                "Message", "Confirm Success"
-            ));
-
+            Map<String, String> vnpParams = new HashMap<>();
+            for (Map.Entry<String, String> entry : allParams.entrySet()) {
+                if (entry.getKey().startsWith("vnp_")) {
+                    vnpParams.put(entry.getKey(), entry.getValue());
+                }
+            }
+            if (paymentGatewayPort.verifyIpnSignature(vnpParams)) {
+                VnPayIpnCommand command = new VnPayIpnCommand(vnpTxnRef, vnpParams.get("vnp_TransactionNo"), vnpResponseCode);
+                paymentUseCase.handleVnPayIpn(command);
+            } else {
+                log.warn("[Payment] VNPay Return có chữ ký KHÔNG hợp lệ!");
+            }
         } catch (Exception e) {
-            log.error("[Payment] Lỗi xử lý IPN VNPay: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of(
-                "RspCode", "99",
-                "Message", "Internal Error"
-            ));
+            log.error("[Payment] Lỗi khi xử lý VNPay Return: {}", e.getMessage(), e);
         }
+        // Tạo Redirect
+        String redirectUrl = String.format("%s?vnp_ResponseCode=%s&vnp_TxnRef=%s",
+            frontendResultUrl,
+            vnpResponseCode != null ? vnpResponseCode : "99",
+            vnpTxnRef != null ? vnpTxnRef : "");
+        return ResponseEntity.status(HttpStatus.FOUND)
+            .location(URI.create(redirectUrl))
+            .build();
+    }
+
+    @GetMapping("/{registrationId}")
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> getPaymentByRegistrationId(@PathVariable UUID registrationId) {
+        PaymentTransaction transaction = paymentUseCase.getPaymentByRegistrationId(registrationId);
+        PaymentResponseDTO responseDto = paymentMapper.toResponseDto(transaction);
+        return ResponseEntity.ok(ApiResponse.ok(responseDto));
     }
 }

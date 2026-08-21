@@ -1,6 +1,8 @@
 package com.example.registration_service.infrastructure.messaging.kafka.listener;
 
+import com.example.registration_service.application.dto.ReserveTicketDTO;
 import com.example.registration_service.application.port.in.RegistrationUseCase;
+import com.example.registration_service.domain.model.valueobject.PaymentProvider;
 import com.example.registration_service.infrastructure.persistence.entity.ProcessedMessageEntity;
 import com.example.registration_service.infrastructure.persistence.repository.JpaProcessedMessageRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,14 +18,6 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Command Handler — Nhận lệnh điều phối từ SagaManager (topic: registration-commands).
- * Thực thi lệnh bằng cách gọi RegistrationUseCase và đảm bảo bắn Event kết quả ra ngoài.
- *
- * Lệnh nhận:
- *   ConfirmPaidRegistrationCommand  → confirmRegistration() → RegistrationConfirmedEvent
- *   RollbackPaidRegistrationCommand → cancelRegistration()  → PaidRegistrationRolledBackEvent
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -70,6 +64,19 @@ public class RegistrationCommandListener {
                     registrationUseCase.cancelRegistration(registrationId, reason);
                     log.info("[CommandHandler] Rollback vé thành công. registrationId={}, reason={}",
                         registrationId, reason);
+                }
+                case "AsyncReserveTicketCommand" -> {
+                    ReserveTicketDTO commandDto = new ReserveTicketDTO();
+                    commandDto.setCampaignId(java.util.UUID.fromString(payloadNode.get("campaignId").asText()));
+                    commandDto.setUserId(java.util.UUID.fromString(payloadNode.get("userId").asText()));
+
+                    if (payloadNode.has("provider") && !payloadNode.get("provider").isNull()) {
+                        String providerCode = payloadNode.get("provider").get("code").asText();
+                        commandDto.setProvider(PaymentProvider.of(providerCode));
+                    }
+
+                    log.info("[CommandHandler] Xử lý Async Ticket cho User: {}", commandDto.getUserId());
+                    registrationUseCase.processAsyncReservation(commandDto);
                 }
                 default -> log.debug("[CommandHandler] Bỏ qua lệnh không hỗ trợ: {}", commandType);
             }

@@ -1,5 +1,6 @@
 package com.example.registration_service.presentation.rest;
 
+import com.example.registration_service.application.dto.ReserveTicketDTO;
 import com.example.registration_service.application.port.in.RegistrationUseCase;
 import com.example.registration_service.domain.model.aggregate.Registration;
 import com.example.registration_service.domain.model.valueobject.RegistrationStatus;
@@ -10,6 +11,7 @@ import com.example.registration_service.presentation.dto.response.CampaignStatsR
 import com.example.registration_service.presentation.dto.response.RegistrationResponse;
 import com.example.registration_service.presentation.dto.response.ReserveTicketResponse;
 import com.example.registration_service.presentation.mapper.RegistrationApiMapper;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,22 +32,41 @@ public class RegistrationController {
     private final RegistrationUseCase registrationUseCase; // Gọi đúng UseCase của Registration
     private final RegistrationApiMapper mapper;
 
+//    @PostMapping("")
+//    @Bulkhead(name = "reserveTicketBulkhead")
+//    public ResponseEntity<ApiResponse<ReserveTicketResponse>> reserveTicket(
+//        @RequestHeader("X-Employee-Id") UUID userId,
+//        @Valid @RequestBody ReserveTicketRequest request) {
+//
+//        UUID registrationId = registrationUseCase.reserveTicket(mapper.toAppCommand(request, userId));
+//
+//        ReserveTicketResponse responseDto = new ReserveTicketResponse(
+//            registrationId,
+//            "Đã khóa vé, chờ thanh toán."
+//        );
+//
+//        return ResponseEntity.status(HttpStatus.CREATED)
+//            .body(ApiResponse.ok(responseDto, "Giữ chỗ thành công. Vui lòng thanh toán (Nếu có)!"));
+//    }
     @PostMapping("")
-    public ResponseEntity<ApiResponse<ReserveTicketResponse>> reserveTicket(
+    @Bulkhead(name = "reserveTicketBulkhead")
+    public ResponseEntity<ApiResponse<String>> reserveTicketAsync(
         @RequestHeader("X-Employee-Id") UUID userId,
         @Valid @RequestBody ReserveTicketRequest request) {
+            ReserveTicketDTO dto = mapper.toAppCommand(request, userId);
 
-        UUID registrationId = registrationUseCase.reserveTicket(mapper.toAppCommand(request, userId));
+            registrationUseCase.reserveTicketAsync(dto);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.ok(null, "Yêu cầu của bạn đang được xếp hàng xử lý..."));
+        }
 
-        ReserveTicketResponse responseDto = new ReserveTicketResponse(
-            registrationId,
-            "Đã khóa vé, chờ thanh toán.",
-            "https://sandbox.vnpayment.vn/paymentv" // Tạm thời chưa có payment service mock
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok(responseDto, "Giữ chỗ thành công. Vui lòng thanh toán (Nếu có)!"));
-    }
+    @GetMapping("/status")
+        public ResponseEntity<ApiResponse<String>> checkStatus(
+            @RequestParam UUID campaignId,
+            @RequestParam UUID userId) {
+            String status = registrationUseCase.getReservationStatus(campaignId, userId);
+            return ResponseEntity.ok(ApiResponse.ok(status, "Thành công"));
+        }
 
     // Lấy danh sách
     @GetMapping

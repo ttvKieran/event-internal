@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -178,5 +179,20 @@ public class EventServiceImpl implements EventUseCase {
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện với ID: " + eventId));
 
         return EventDetailsDTO.fromDomain(event);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventDetailsDTO> getEvents(String statusStr, int page, int size) {
+        EventStatus status = null;
+        if (statusStr != null && !statusStr.isEmpty()) {
+            status = EventStatus.of(statusStr.toUpperCase());
+        }
+
+        List<Event> events = eventRepository.findEvents(status, page, size);
+
+        return events.stream()
+            .map(EventDetailsDTO::fromDomain)
+            .collect(Collectors.toList());
     }
 }

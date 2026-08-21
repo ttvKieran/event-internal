@@ -3,6 +3,7 @@ package com.example.payment_service.application.service;
 import com.example.payment_service.application.dto.command.VnPayIpnCommand;
 import com.example.payment_service.application.dto.message.RegistrationRequestedPayload;
 import com.example.payment_service.application.port.in.PaymentUseCase;
+import com.example.payment_service.application.port.out.PaymentGatewayPort;
 import com.example.payment_service.application.port.out.PaymentMessagePort;
 import com.example.payment_service.domain.model.aggregate.PaymentTransaction;
 import com.example.payment_service.domain.model.valueobject.Money;
@@ -25,6 +26,8 @@ public class PaymentServiceImpl implements PaymentUseCase {
 
     private final PaymentRepository paymentRepository;
     private final PaymentMessagePort messagePort;
+    private final PaymentGatewayPort paymentGatewayPort;
+
     @Value("${payment.expiration.timeout-minutes:15}")
     private int paymentTimeoutMinutes;
 
@@ -45,11 +48,13 @@ public class PaymentServiceImpl implements PaymentUseCase {
             PaymentProvider.of(payload.getProvider())
         );
 
-        // TODO: Gọi VNPay SDK để sinh paymentUrl
-        // String url = vnPayService.createPaymentUrl(transaction);
-        // transaction.assignPaymentUrl(url);
-        String mockUrl = "https://sandbox.vnpayment.vn/pay?vnp_TxnRef=" + transaction.getRegistrationId();
-        transaction.assignPaymentUrl(mockUrl);
+        String orderInfo = "Thanh toan ve su kien " + transaction.getCampaignId();
+        String paymentUrl = paymentGatewayPort.createPaymentUrl(
+            transaction.getRegistrationId(),
+            transaction.getAmount(),
+            orderInfo
+        );
+        transaction.assignPaymentUrl(paymentUrl);
 
         paymentRepository.save(transaction);
 
@@ -67,14 +72,11 @@ public class PaymentServiceImpl implements PaymentUseCase {
                 "Không tìm thấy giao dịch cho registrationId=" + registrationId));
 
         if ("00".equals(command.getVnpResponseCode())) {
-            // Thanh toán Thành công
             transaction.markAsSuccess(command.getVnpTransactionNo());
             paymentRepository.save(transaction);
             messagePort.publishPaymentSucceeded(transaction);
             log.info("[Payment] Thanh toán thành công. registrationId={}", registrationId);
-
         } else {
-            // Thanh toán Thất bại
             transaction.markAsFailed();
             paymentRepository.save(transaction);
             messagePort.publishPaymentFailed(transaction, "PAYMENT_FAILED");
@@ -94,10 +96,17 @@ public class PaymentServiceImpl implements PaymentUseCase {
         log.info("[Payment] Scheduler phát hiện {} giao dịch quá hạn. Đang xử lý...", staleList.size());
 
         for (PaymentTransaction txn : staleList) {
-            txn.markAsExpired();                                   // Domain tự bảo vệ — Idempotent
+            txn.markAsExpired();
             paymentRepository.save(txn);
             messagePort.publishPaymentFailed(txn, "PAYMENT_TIMED_OUT");
             log.info("[Payment] Đã hủy giao dịch hết hạn. registrationId={}", txn.getRegistrationId());
         }
     }
+
+    @Override
+    public PaymentTransaction getPaymentByRegistrationId(UUID registrationId) {
+        return paymentRepository.findByRegistrationId(registrationId)
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch cho registrationId=" + registrationId));
+    }
+
 }

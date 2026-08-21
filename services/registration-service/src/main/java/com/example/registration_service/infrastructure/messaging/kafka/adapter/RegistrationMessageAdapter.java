@@ -58,6 +58,24 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
         insertOutbox(reg, "PaidRegistrationRolledBackEvent", payload);
     }
 
+    @Override
+    public void publishAsyncReserveTicketCommand(com.example.registration_service.application.dto.ReserveTicketDTO command) {
+        try {
+            String json = objectMapper.writeValueAsString(command);
+            OutboxEventEntity outbox =
+                OutboxEventEntity.of(
+                    "Registration",
+                    command.getCampaignId().toString(),
+                    "AsyncReserveTicketCommand",
+                    json
+                );
+            outboxRepository.save(outbox);
+            log.info("[Outbox] Đã lưu lệnh AsyncReserveTicketCommand");
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new RuntimeException("Lỗi serialize AsyncReserveTicketCommand", e);
+        }
+    }
+
     private void insertOutbox(Registration reg, String eventType, Object payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);
