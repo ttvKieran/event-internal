@@ -1,4 +1,4 @@
-package com.example.iam_service.infrastructure.security;
+package com.example.common.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-@Component
 public class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
