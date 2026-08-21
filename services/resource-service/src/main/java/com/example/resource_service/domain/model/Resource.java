@@ -8,10 +8,6 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * TẦNG LÕI (DOMAIN LAYER) - Aggregate Root: Resource
- * Đã lược bỏ SlotReservation do Registration Service đảm nhận nghiệp vụ giữ chỗ.
- */
 @Getter
 @Setter
 @Builder
