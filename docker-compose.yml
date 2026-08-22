@@ -271,6 +271,26 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
     networks:
       - app-network
+  # ─── Analytics Service ─────────────────────────
+  analytics-service:
+    build: ./services/analytics-service
+    container_name: analytics-service
+    ports:
+      - "${ANALYTICS_SERVICE_PORT:-8088}:8088"
+    depends_on:
+      analytics-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - DB_HOST=analytics-db
+      - DB_PORT=5432
+      - DB_NAME=${ANALYTICS_DB_NAME:-analytics_db}
+      - DB_USER=${ANALYTICS_DB_USER:-postgres}
+      - DB_PASSWORD=${ANALYTICS_DB_PASSWORD:-postgres}
+      - KAFKA_URL=kafka:29092
+    networks:
+      - app-network
 
   # ─── Shared Infrastructure (Event DB) ────────────
   event-db:
@@ -342,6 +362,23 @@ services:
       retries: 5
     volumes:
       - notification_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+  analytics-db:
+    image: quay.io/debezium/postgres:16
+    ports:
+      - "${ANALYTICS_DB_PORT:-5438}:5432"
+    environment:
+      POSTGRES_DB: ${ANALYTICS_DB_NAME:-analytics_db}
+      POSTGRES_USER: ${ANALYTICS_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ANALYTICS_DB_PASSWORD:-postgres}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - analytics_db_data:/var/lib/postgresql/data
     networks:
       - app-network
 
@@ -551,6 +588,29 @@ services:
     restart: "no"
     networks:
       - app-network
+  debezium-init-analytics:
+    image: curlimages/curl:latest
+    environment:
+      - DB_USER=${ANALYTICS_DB_USER:-postgres}
+      - DB_PASSWORD=${ANALYTICS_DB_PASSWORD:-postgres}
+      - DB_NAME=${ANALYTICS_DB_NAME:-analytics_db}
+      - DB_HOST=analytics-db
+      - DB_PORT=5432
+      - DEBEZIUM_HOST=debezium
+      - DEBEZIUM_PORT=8083
+      - CONNECTOR_NAME=analytics-outbox-connector
+      - TOPIC_PREFIX=vtit
+      - TABLE_INCLUDE_LIST=public.outbox_events
+      - ROUTE_TOPIC_REPLACEMENT=Metrics
+    volumes:
+      - ./scripts:/scripts:ro
+    command: [ "sh", "/scripts/debezium/register-analytics-connector.sh" ]
+    depends_on:
+      - debezium
+      - analytics-db
+    restart: "no"
+    networks:
+      - app-network
 
 networks:
   app-network:
@@ -564,3 +624,4 @@ volumes:
   registration_db_data:
   payment_db_data:
   notification_db_data:
+  analytics_db_data:
