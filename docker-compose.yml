@@ -22,7 +22,7 @@ services:
       - "${GATEWAY_PORT:-8000}:8000"
     depends_on:
       iam-service:
-        condition: service_healthy
+        condition: service_started
     environment:
       - IAM_SERVICE_URL=http://iam-service:${IAM_SERVICE_PORT:-8085}
       - ATTENDANCE_SERVICE_URL=http://attendance-service:${ATTENDANCE_SERVICE_PORT:-8086}
@@ -43,9 +43,9 @@ services:
       - "${IAM_SERVICE_PORT:-8085}:8085"
     depends_on:
       iam-db:
-        condition: service_healthy
+        condition: service_started
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       - DB_HOST=iam-db
       - IAM_DB_PORT=5432
@@ -54,12 +54,6 @@ services:
       - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
       - KAFKA_URL=kafka:29092
       - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
-      - SPRING_SQL_INIT_MODE=always
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     networks:
       - app-network
 
@@ -91,9 +85,9 @@ services:
       - "${ATTENDANCE_SERVICE_PORT:-8086}:8086"
     depends_on:
       attendance-db:
-        condition: service_healthy
+        condition: service_started
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       - DB_HOST=attendance-db
       - ATTENDANCE_DB_PORT=5432
@@ -138,9 +132,9 @@ services:
       - "${RESOURCE_SERVICE_PORT:-8081}:8081"
     depends_on:
       resource-db:
-        condition: service_healthy
+        condition: service_started
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       - DB_HOST=resource-db
       - RESOURCE_DB_PORT=5432

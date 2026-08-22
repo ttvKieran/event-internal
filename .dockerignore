@@ -1,0 +1,15 @@
+# Maven
+target/
+.mvn/
+mvnw
+mvnw.cmd
+*.jar
+
+# Git & IDE
+.git/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
