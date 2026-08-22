@@ -6,207 +6,164 @@ servers:
   productionBroker:
     url: broker.events.internal.company.vn:9092
     protocol: kafka
-    description: Message Broker production (minh họa bằng Kafka; tương thích RabbitMQ/Topic-Queue
-      tương đương).
+    description: Message Broker production (Kafka).
   stagingBroker:
     url: broker.events.staging.company.vn:9092
     protocol: kafka
 channels:
-  Metrics:
-    description: 'Domain Events của Aggregate `Event Metrics` (Analytics — CQRS Read
-      Model,
-
-      Pure Consumer, mục 3.6). Publisher — Analytics Service, phục vụ realtime update
-
-      cho Organizer Dashboard (vd. qua WebSocket Gateway lắng nghe kênh này).
-
-      '
-    publish:
-      operationId: emitMetricsEvent
-      summary: Analytics Service phát sự kiện cập nhật Projection thống kê.
-      message:
-        oneOf:
-          - $ref: '#/components/messages/RegistrationMetricsUpdatedEvent'
-          - $ref: '#/components/messages/AttendanceMetricsUpdatedEvent'
-          - $ref: '#/components/messages/CheckInRateCalculatedEvent'
-  analytics-commands:
-    description: 'Point-to-Point — chỉ **Analytics Service** subscribe (CQRS Projection
-      side, Pure
-
-      Consumer, mục 3.6). Command phát sinh từ Registration Metrics Policy và
-
-      Attendance Metrics Policy khi nghe Event tương ứng.
-
-      '
+  Event:
+    description: 'Topic ch?a c�c Domain Events c?a v�ng d?i Event. Analytics Service subscribe d? kh?i t?o d? li?u th?ng k�.'
     subscribe:
-      operationId: onAnalyticsCommand
-      summary: Analytics Service nhận lệnh cập nhật các Metrics Projection.
+      operationId: onEventServiceEvent
+      summary: Nh?n c?u h�nh g?c c?a s? ki?n
       message:
         oneOf:
-          - $ref: '#/components/messages/UpdateRegistrationMetricsCommand'
-          - $ref: '#/components/messages/UpdateAttendanceMetricsCommand'
-          - $ref: '#/components/messages/CalculateCheckInRateCommand'
+          - $ref: '#/components/messages/EventCreatedEvent'
+          - $ref: '#/components/messages/EventDetailsConfiguredEvent'
+
+  Registration:
+    description: 'Topic ch?a Domain Events c?a vi?c dang k� v�. Analytics Service subscribe d? c?p nh?t s? lu?ng dang k�.'
+    subscribe:
+      operationId: onRegistrationEvent
+      summary: Nh?n thay d?i tr?ng th�i dang k� v�
+      message:
+        oneOf:
+          - $ref: '#/components/messages/RegistrationConfirmedEvent'
+          - $ref: '#/components/messages/PaidRegistrationRolledBackEvent'
+
+  Attendance:
+    description: 'Topic ch?a Domain Events c?a vi?c di?m danh. Analytics Service subscribe d? t�nh check-in rate.'
+    subscribe:
+      operationId: onAttendanceEvent
+      summary: Nh?n th�ng tin di?m danh QR
+      message:
+        $ref: '#/components/messages/ParticipantCheckedInEvent'
+
+  Metrics:
+    description: 'Topic ph�t ra Domain Events c?a Aggregate EventMetrics khi c� b?t k? ch? s? n�o thay d?i. Ph?c v? update realtime qua WebSocket.'
+    publish:
+      operationId: emitMetricsUpdatedEvent
+      summary: Ph�t s? ki?n t?ng h?p s? li?u d� thay d?i
+      message:
+        $ref: '#/components/messages/MetricsUpdatedEvent'
+
 components:
   schemas:
-    RegistrationMetricsUpdatedEventPayload:
+    # ------------- SUBSCRIBED PAYLOADS -------------
+    EventCreatedEventPayload:
       type: object
       properties:
         eventId:
           type: string
           format: uuid
-        totalRegistrations:
-          type: integer
-        freeCount:
-          type: integer
-        paidCount:
-          type: integer
-        updatedAt:
-          type: string
-          format: date-time
-    AttendanceMetricsUpdatedEventPayload:
+    
+    EventDetailsConfiguredEventPayload:
       type: object
       properties:
         eventId:
           type: string
           format: uuid
-        checkedInCount:
-          type: integer
-        updatedAt:
+        ticketType:
           type: string
-          format: date-time
-    CheckInRateCalculatedEventPayload:
-      type: object
-      properties:
-        eventId:
-          type: string
-          format: uuid
-        checkInRate:
+          description: '"FREE" ho?c "PAID"'
+        price:
           type: number
           format: float
-        calculatedAt:
+        maxParticipants:
+          type: integer
+
+    RegistrationConfirmedEventPayload:
+      type: object
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+          description: '�nh x? v?i eventId'
+          
+    PaidRegistrationRolledBackEventPayload:
+      type: object
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+          description: '�nh x? v?i eventId'
+
+    ParticipantCheckedInEventPayload:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+
+    # ------------- PUBLISHED PAYLOADS -------------
+    MetricsUpdatedEventPayload:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        updatedAt:
           type: string
           format: date-time
-    UpdateRegistrationMetricsCommandPayload:
-      type: object
-      required:
-        - eventId
-      properties:
-        eventId:
-          type: string
-          format: uuid
-        delta:
-          type: object
-          properties:
-            freeConfirmed:
-              type: integer
-            paidConfirmed:
-              type: integer
-            cancelled:
-              type: integer
-    UpdateAttendanceMetricsCommandPayload:
-      type: object
-      required:
-        - eventId
-      properties:
-        eventId:
-          type: string
-          format: uuid
-        delta:
-          type: object
-          properties:
-            checkedIn:
-              type: integer
-            checkedOut:
-              type: integer
-    CalculateCheckInRateCommandPayload:
-      type: object
-      required:
-        - eventId
-      properties:
-        eventId:
-          type: string
-          format: uuid
+
   messages:
-    RegistrationMetricsUpdatedEvent:
-      name: RegistrationMetricsUpdatedEvent
+    EventCreatedEvent:
+      name: EventCreatedEvent
       traits:
         - $ref: '#/components/messageTraits/eventTrait'
       payload:
-        $ref: '#/components/schemas/RegistrationMetricsUpdatedEventPayload'
-    AttendanceMetricsUpdatedEvent:
-      name: AttendanceMetricsUpdatedEvent
+        $ref: '#/components/schemas/EventCreatedEventPayload'
+
+    EventDetailsConfiguredEvent:
+      name: EventDetailsConfiguredEvent
       traits:
         - $ref: '#/components/messageTraits/eventTrait'
       payload:
-        $ref: '#/components/schemas/AttendanceMetricsUpdatedEventPayload'
-    CheckInRateCalculatedEvent:
-      name: CheckInRateCalculatedEvent
+        $ref: '#/components/schemas/EventDetailsConfiguredEventPayload'
+
+    RegistrationConfirmedEvent:
+      name: RegistrationConfirmedEvent
       traits:
         - $ref: '#/components/messageTraits/eventTrait'
       payload:
-        $ref: '#/components/schemas/CheckInRateCalculatedEventPayload'
-    UpdateRegistrationMetricsCommand:
-      name: UpdateRegistrationMetricsCommand
-      title: UpdateRegistrationMetricsCommand
-      summary: Cập nhật Registration Metrics Projection (Registration Metrics Policy).
+        $ref: '#/components/schemas/RegistrationConfirmedEventPayload'
+
+    PaidRegistrationRolledBackEvent:
+      name: PaidRegistrationRolledBackEvent
       traits:
-        - $ref: '#/components/messageTraits/commandTrait'
+        - $ref: '#/components/messageTraits/eventTrait'
       payload:
-        $ref: '#/components/schemas/UpdateRegistrationMetricsCommandPayload'
-    UpdateAttendanceMetricsCommand:
-      name: UpdateAttendanceMetricsCommand
-      title: UpdateAttendanceMetricsCommand
-      summary: Cập nhật Attendance Metrics Projection (Attendance Metrics Policy).
+        $ref: '#/components/schemas/PaidRegistrationRolledBackEventPayload'
+
+    ParticipantCheckedInEvent:
+      name: ParticipantCheckedInEvent
       traits:
-        - $ref: '#/components/messageTraits/commandTrait'
+        - $ref: '#/components/messageTraits/eventTrait'
       payload:
-        $ref: '#/components/schemas/UpdateAttendanceMetricsCommandPayload'
-    CalculateCheckInRateCommand:
-      name: CalculateCheckInRateCommand
-      title: CalculateCheckInRateCommand
-      summary: Tính lại Check-in Rate thời gian thực (Attendance Metrics Policy).
+        $ref: '#/components/schemas/ParticipantCheckedInEventPayload'
+
+    MetricsUpdatedEvent:
+      name: MetricsUpdatedEvent
+      summary: S? ki?n gom chung t?t c? thay d?i c?a Metrics
       traits:
-        - $ref: '#/components/messageTraits/commandTrait'
+        - $ref: '#/components/messageTraits/eventTrait'
       payload:
-        $ref: '#/components/schemas/CalculateCheckInRateCommandPayload'
+        $ref: '#/components/schemas/MetricsUpdatedEventPayload'
+
   messageTraits:
     eventTrait:
       headers:
         type: object
         required:
           - messageId
-          - correlationId
+          - eventType
           - timestamp
         properties:
           messageId:
             type: string
             format: uuid
-          correlationId:
+          eventType:
             type: string
-            format: uuid
-            description: Truy vết Event này thuộc Saga/luồng nghiệp vụ nào.
-          timestamp:
-            type: string
-            format: date-time
-    commandTrait:
-      headers:
-        type: object
-        required:
-          - messageId
-          - correlationId
-        properties:
-          messageId:
-            type: string
-            format: uuid
-            description: ID duy nhất của message (idempotency key).
-          correlationId:
-            type: string
-            format: uuid
-            description: Nối các bước trong cùng một Saga/luồng nghiệp vụ.
-          replyTo:
-            type: string
-            description: Return address (topic/queue) để service xử lý gửi phản hồi
-              — phục vụ Async Request/Response.
           timestamp:
             type: string
             format: date-time
