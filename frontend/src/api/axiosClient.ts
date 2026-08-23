@@ -15,19 +15,12 @@ export const axiosClient = axios.create({
 // Add a request interceptor
 axiosClient.interceptors.request.use(
   (config) => {
-    // === MOCK IAM SERVICE: /auth/login ===
-    // If the request is to login, we bypass the actual API call using a custom adapter or handling it
-    // Wait, axios interceptor can't easily return a mock response without throwing or using a custom adapter.
-    // Let's attach token from Zustand/LocalStorage if it exists
+    // Attach token from LocalStorage if it exists
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Dynamic X-Employee-Id header from AuthStore or Fallback
-    const authState = useAuthStore.getState();
-    const currentEmpId = authState.employee?.employeeId || '999e4567-e89b-12d3-a456-426614174999';
-    config.headers['X-Employee-Id'] = currentEmpId;
     return config;
   },
   (error) => {

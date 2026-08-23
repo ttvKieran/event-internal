@@ -35,7 +35,7 @@ export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' 
     },
   });
 
-  const currentUserId = employee?.employeeId || '999e4567-e89b-12d3-a456-426614174999';
+  const currentUserId = employee?.id || employee?.employeeId || '999e4567-e89b-12d3-a456-426614174999';
 
   // 2. Query Polling (Chỉ chạy khi regState === 'POLLING')
   useQuery({

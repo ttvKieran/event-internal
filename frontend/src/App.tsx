@@ -6,6 +6,7 @@ import { MainLayout } from './layouts/MainLayout'
 import { LoginPage } from './features/auth/LoginPage'
 import { EmployeeEventList } from './features/events/EmployeeEventList'
 import { OrganizerEventList } from './features/events/OrganizerEventList'
+import { ProfilePage } from './features/profile/ProfilePage'
 import { EventDetailPage } from './features/events/EventDetailPage'
 import { PaymentResultPage } from './features/payment/PaymentResultPage'
 import { Toaster } from '@/components/ui/sonner'
@@ -18,7 +19,9 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode,
     return <Navigate to="/login" replace />
   }
   
-  if (allowedRoles && !allowedRoles.includes(employee.role)) {
+  const roleName = typeof employee.role === 'object' ? employee.role.name : employee.role;
+
+  if (allowedRoles && !allowedRoles.includes(roleName as string)) {
     return <Navigate to="/events" replace />
   }
   
@@ -39,6 +42,9 @@ function App() {
           
           {/* Default redirect based on role */}
           <Route path="/" element={<Navigate to="/events" replace />} />
+          
+          {/* Common Routes */}
+          <Route path="/profile" element={<ProfilePage />} />
           
           {/* Employee Routes */}
           <Route path="/events" element={<EmployeeEventList />} />

@@ -15,7 +15,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 // Define the form schema with Zod
 const loginSchema = z.object({
-  employeeCode: z.string().min(1, 'Vui lòng nhập mã nhân viên (VD: admin hoặc user)'),
+  employeeCode: z.string().min(1, 'Vui lòng nhập mã nhân viên'),
   password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
 });
 
@@ -44,7 +44,8 @@ export function LoginPage() {
       login(data.token, data.employee);
       
       // Redirect based on role
-      if (data.employee.role === 'ORGANIZER') {
+      const roleName = typeof data.employee.role === 'object' ? data.employee.role.name : data.employee.role;
+      if (roleName === 'ORGANIZER' || roleName === 'ADMIN') {
         navigate('/admin/events');
       } else {
         navigate('/events');
@@ -80,7 +81,7 @@ export function LoginPage() {
                 <FormItem>
                   <FormLabel>Mã nhân viên</FormLabel>
                   <FormControl>
-                    <Input placeholder="VD: admin hoặc user" {...field} disabled={isLoading} />
+                    <Input placeholder="Nhập mã nhân viên..." {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,13 +115,6 @@ export function LoginPage() {
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2 border-t pt-4">
-        <div className="text-sm text-slate-500 text-center w-full">
-          <p>Tài khoản Test:</p>
-          <p>Organizer: <b>admin / admin</b></p>
-          <p>Employee: <b>user / user</b></p>
-        </div>
-      </CardFooter>
     </Card>
   );
 }

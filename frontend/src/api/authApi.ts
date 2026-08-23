@@ -1,38 +1,59 @@
-import { type Employee, type EmployeeRole } from '../store/useAuthStore';
+import { type Employee } from '../store/useAuthStore';
+import { axiosClient } from './axiosClient';
 
-// MOCK DATA based on docs/api-specs/iam-service.yaml
-const mockEmployeeData: Employee = {
-  employeeId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-  employeeCode: 'EMP00123',
-  fullName: 'Nguyễn Văn An',
-  email: 'an.nguyen@company.vn',
-  department: 'Trung tâm Phân tích Dữ liệu',
-  role: 'ORGANIZER', // Change this to EMPLOYEE to test the other role
-};
+interface LoginResponseData {
+  accessToken: string;
+  refreshToken: string;
+  employee: Employee;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
 
 export const authApi = {
-  login: async (employeeCode: string, password: string):Promise<{token: string, employee: Employee}> => {
-    // Giả lập network delay
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (employeeCode === 'admin' && password === 'admin') {
-          resolve({
-            token: 'mock-jwt-token-ey...',
-            employee: { ...mockEmployeeData, role: 'ORGANIZER' }
-          });
-        } else if (employeeCode === 'user' && password === 'user') {
-          resolve({
-            token: 'mock-jwt-token-ey...',
-            employee: { ...mockEmployeeData, role: 'EMPLOYEE', employeeCode: 'EMP99999' }
-          });
-        } else {
-          reject({
-            success: false,
-            code: 'INVALID_CREDENTIALS',
-            message: 'Mã nhân viên hoặc mật khẩu không chính xác.'
-          });
-        }
-      }, 1000);
-    });
+  login: async (employeeCode: string, password: string): Promise<{ token: string, employee: Employee }> => {
+    try {
+      const response = await axiosClient.post<any, ApiResponse<LoginResponseData>>('/auth/login', {
+        employeeCode,
+        password,
+      });
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Đăng nhập thất bại');
+      }
+
+      return {
+        token: response.data.accessToken,
+        employee: response.data.employee,
+      };
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  getMe: async (): Promise<Employee> => {
+    try {
+      const response = await axiosClient.get<any, ApiResponse<Employee>>('/auth/me');
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Không thể lấy thông tin cá nhân');
+      }
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  updateProfile: async (id: string, data: { fullname?: string, email?: string, password?: string }): Promise<void> => {
+    try {
+      const response = await axiosClient.patch<any, ApiResponse<any>>(`/Employees/${id}`, data);
+      if (!response.success) {
+        throw new Error(response.message || 'Cập nhật thất bại');
+      }
+    } catch (error: any) {
+      throw error;
+    }
   }
 };

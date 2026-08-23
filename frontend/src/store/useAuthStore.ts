@@ -3,12 +3,14 @@ import { create } from 'zustand';
 export type EmployeeRole = 'ORGANIZER' | 'EMPLOYEE';
 
 export interface Employee {
-  employeeId: string;
+  id: string;
+  employeeId?: string; // Add this just in case other parts of frontend still use it
   employeeCode: string;
-  fullName: string;
+  fullName?: string;
+  fullname?: string;
   email: string;
-  department: string;
-  role: EmployeeRole;
+  department?: string | { id: string; name: string; description: string };
+  role?: string | { id: string; name: string; description: string };
 }
 
 interface AuthState {
@@ -16,6 +18,7 @@ interface AuthState {
   token: string | null;
   employee: Employee | null;
   login: (token: string, employee: Employee) => void;
+  updateEmployee: (employee: Employee) => void;
   logout: () => void;
 }
 
@@ -26,28 +29,26 @@ const getInitialEmployee = (): Employee | null => {
       return JSON.parse(saved);
     } catch (e) {}
   }
-  // Default fallback user so app works seamlessly
-  return {
-    employeeId: '999e4567-e89b-12d3-a456-426614174999',
-    employeeCode: 'NV001',
-    fullName: 'Nguyễn Văn A',
-    email: 'nguyenvana@viettel.com.vn',
-    department: 'Trung tâm Công nghệ Thông tin',
-    role: 'EMPLOYEE',
-  };
+  return null;
 };
 
 const initialEmp = getInitialEmployee();
+const initialToken = localStorage.getItem('accessToken');
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: true,
-  token: localStorage.getItem('accessToken') || 'mock-jwt-token',
+  isAuthenticated: !!initialToken && !!initialEmp,
+  token: initialToken,
   employee: initialEmp,
   
   login: (token, employee) => {
     localStorage.setItem('accessToken', token);
     localStorage.setItem('employee', JSON.stringify(employee));
     set({ isAuthenticated: true, token, employee });
+  },
+  
+  updateEmployee: (employee) => {
+    localStorage.setItem('employee', JSON.stringify(employee));
+    set({ employee });
   },
   
   logout: () => {

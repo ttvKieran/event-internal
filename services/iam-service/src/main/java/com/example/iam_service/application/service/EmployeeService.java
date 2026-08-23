@@ -65,8 +65,8 @@ public class EmployeeService implements EmployeeUseCase {
 
     @Override
     @Transactional
-    public void updateEmployee(String employeeCode, UpdateEmployeeRequest request) {
-        Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+    public void updateEmployee(String employeeId, UpdateEmployeeRequest request) {
+        Employee employee = employeeRepository.findById(employeeId)
             .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         if (request.getFullname() != null && !request.getFullname().trim().isEmpty()) {

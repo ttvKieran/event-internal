@@ -36,13 +36,13 @@ public class EmployeeController {
         }
     }
 
-    @PatchMapping("/{employeeCode}")
-    @PreAuthorize("hasAuthority('ADMIN') or #employeeCode == authentication.principal.employeeCode")
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or #id.equals(authentication.name)")
     public ResponseEntity<?> updateEmployee(
-            @PathVariable("employeeCode") String employeeCode,
+            @PathVariable("id") String id,
             @RequestBody com.example.iam_service.presentation.dto.UpdateEmployeeRequest request) {
         try {
-            employeeUseCase.updateEmployee(employeeCode, request);
+            employeeUseCase.updateEmployee(id, request);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Update information successfully"
@@ -57,7 +57,13 @@ public class EmployeeController {
 
     @PutMapping("/{id}/lock")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<?> lockEmployee(@PathVariable("id") String id) {
+    public ResponseEntity<?> lockEmployee(@PathVariable("id") String id, org.springframework.security.core.Authentication authentication) {
+        if (id.equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", "Cannot lock your own account"
+            ));
+        }
         try {
             employeeUseCase.lockEmployee(id);
             return ResponseEntity.ok(Map.of(

@@ -13,7 +13,8 @@ export function MainLayout() {
     navigate('/login');
   };
 
-  const isOrganizer = employee?.role === 'ORGANIZER';
+  const roleName = typeof employee?.role === 'object' ? employee?.role?.name : employee?.role;
+  const isOrganizer = roleName === 'ORGANIZER' || roleName === 'ADMIN';
 
   return (
     <div className="min-h-screen bg-slate-50/70 flex flex-col font-sans antialiased text-slate-900 selection:bg-red-500 selection:text-white">
@@ -78,16 +79,20 @@ export function MainLayout() {
 
             {/* Profile & Logout */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2.5 bg-slate-100/90 border border-slate-200 px-3 py-1 rounded-md">
+              <div 
+                className="hidden sm:flex items-center gap-2.5 bg-slate-100/90 hover:bg-slate-200/80 cursor-pointer border border-slate-200 px-3 py-1 rounded-md transition-colors"
+                onClick={() => navigate('/profile')}
+                title="Xem hồ sơ cá nhân"
+              >
                 <div className="w-6 h-6 rounded bg-red-600 text-white font-extrabold flex items-center justify-center text-xs">
-                  {employee?.fullName?.charAt(0) || 'U'}
+                  {(employee?.fullName || employee?.fullname || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="text-xs font-bold text-slate-900 leading-tight">
-                    {employee?.fullName}
+                    {employee?.fullName || employee?.fullname}
                   </span>
                   <span className="text-[10px] font-medium text-slate-500">
-                    {employee?.department || 'VTIT'}
+                    {typeof employee?.department === 'object' ? employee.department.name : (employee?.department || 'VTIT')}
                   </span>
                 </div>
                 <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${
@@ -95,7 +100,7 @@ export function MainLayout() {
                     ? 'bg-red-600' 
                     : 'bg-slate-800'
                 }`}>
-                  {employee?.role}
+                  {roleName}
                 </span>
               </div>
 
