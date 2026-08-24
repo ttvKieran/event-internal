@@ -1,8 +1,10 @@
 package com.example.registration_service.infrastructure.messaging.kafka.adapter;
 
-import com.example.registration_service.application.dto.message.PaidRegistrationRolledBackEventPayload;
-import com.example.registration_service.application.dto.message.RegistrationConfirmedEventPayload;
-import com.example.registration_service.application.dto.message.RegistrationRequestedEventPayload;
+import com.example.registration_service.application.model.command.ReserveTicketCommand;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.outbound.AsyncReserveTicketCommandPayload;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.outbound.PaidRegistrationRolledBackEventPayload;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.outbound.RegistrationConfirmedEventPayload;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.outbound.RegistrationRequestedEventPayload;
 import com.example.registration_service.application.port.out.RegistrationMessagePort;
 import com.example.registration_service.domain.model.aggregate.Registration;
 import com.example.registration_service.infrastructure.persistence.entity.OutboxEventEntity;
@@ -59,19 +61,33 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
     }
 
     @Override
-    public void publishAsyncReserveTicketCommand(com.example.registration_service.application.dto.ReserveTicketDTO command) {
+    public void publishAsyncReserveTicketCommand(ReserveTicketCommand command) {
+        AsyncReserveTicketCommandPayload.ProviderPayload provider =
+            command.providerCode() == null
+                ? null
+                : new AsyncReserveTicketCommandPayload.ProviderPayload(
+                    command.providerCode()
+                );
+
+        AsyncReserveTicketCommandPayload payload =
+            new AsyncReserveTicketCommandPayload(
+                command.campaignId(),
+                command.userId(),
+                provider
+            );
+
         try {
-            String json = objectMapper.writeValueAsString(command);
+            String json = objectMapper.writeValueAsString(payload);
             OutboxEventEntity outbox =
                 OutboxEventEntity.of(
                     "Registration",
-                    command.getCampaignId().toString(),
+                    command.campaignId().toString(),
                     "AsyncReserveTicketCommand",
                     json
                 );
             outboxRepository.save(outbox);
             log.info("[Outbox] Đã lưu lệnh AsyncReserveTicketCommand");
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             throw new RuntimeException("Lỗi serialize AsyncReserveTicketCommand", e);
         }
     }

@@ -1,7 +1,9 @@
-package com.example.registration_service.application.dto.message;
+package com.example.registration_service.infrastructure.messaging.kafka.dto.inbound;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -11,7 +13,7 @@ public class EventDetailsConfiguredMessage {
     private UUID eventId;
     private String ticketType;
     private int maxParticipants;
-    private java.math.BigDecimal price;
+    private BigDecimal price;
     private LocalDateTime registrationOpenAt;
     private LocalDateTime registrationCloseAt;
 }

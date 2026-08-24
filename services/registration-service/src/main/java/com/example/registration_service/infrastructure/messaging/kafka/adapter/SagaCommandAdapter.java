@@ -1,7 +1,7 @@
 package com.example.registration_service.infrastructure.messaging.kafka.adapter;
 
-import com.example.registration_service.application.dto.message.ConfirmPaidRegistrationCommandPayload;
-import com.example.registration_service.application.dto.message.RollbackPaidRegistrationCommandPayload;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.outbound.ConfirmPaidRegistrationCommandPayload;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.outbound.RollbackPaidRegistrationCommandPayload;
 import com.example.registration_service.application.port.out.SagaCommandPort;
 import com.example.registration_service.infrastructure.persistence.entity.OutboxEventEntity;
 import com.example.registration_service.infrastructure.persistence.repository.JpaOutboxRepository;

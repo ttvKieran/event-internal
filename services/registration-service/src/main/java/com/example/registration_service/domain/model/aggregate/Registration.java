@@ -19,12 +19,17 @@ public class Registration {
 
     private Registration() {}
 
-    public static Registration createNew(UUID campaignId, UUID userId, boolean isFreeTicket) {
+    public static Registration createNew(
+        UUID registrationId,
+        UUID campaignId,
+        UUID userId,
+        boolean isFreeTicket,
+        LocalDateTime registeredAt) {
         Registration reg = new Registration();
-        reg.registrationId = UUID.randomUUID();
+        reg.registrationId = registrationId;
         reg.campaignId = campaignId;
         reg.userId = userId;
-        reg.registeredAt = LocalDateTime.now();
+        reg.registeredAt = registeredAt;
         reg.status = isFreeTicket ? RegistrationStatus.CONFIRMED : RegistrationStatus.RESERVED;
         return reg;
     }

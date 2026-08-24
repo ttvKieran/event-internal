@@ -2,7 +2,7 @@ package com.example.registration_service.infrastructure.persistence.adapter;
 
 import com.example.registration_service.domain.model.aggregate.Registration;
 import com.example.registration_service.domain.model.valueobject.RegistrationStatus;
-import com.example.registration_service.domain.repository.RegistrationRepository;
+import com.example.registration_service.application.port.out.RegistrationRepository;
 import com.example.registration_service.infrastructure.persistence.entity.RegistrationEntity;
 import com.example.registration_service.infrastructure.persistence.mapper.RegistrationMapper;
 import com.example.registration_service.infrastructure.persistence.repository.JpaRegistrationRepository;

@@ -1,119 +1,165 @@
 package com.example.registration_service.application.service;
 
-import com.example.registration_service.application.dto.ReserveTicketDTO;
-import com.example.registration_service.application.port.in.RegistrationUseCase;
+import com.example.registration_service.application.model.command.CancelRegistrationCommand;
+import com.example.registration_service.application.model.command.ReserveTicketCommand;
+import com.example.registration_service.application.model.query.RegistrationFilter;
+import com.example.registration_service.application.model.result.RegistrationResult;
+import com.example.registration_service.application.port.in.RegistrationCommandUseCase;
+import com.example.registration_service.application.port.in.RegistrationQueryUseCase;
+import com.example.registration_service.application.port.out.RegistrationCampaignRepository;
+import com.example.registration_service.application.port.out.RegistrationIdGenerator;
 import com.example.registration_service.application.port.out.RegistrationMessagePort;
+import com.example.registration_service.application.port.out.RegistrationRepository;
 import com.example.registration_service.application.port.out.TicketCachePort;
 import com.example.registration_service.domain.model.aggregate.Registration;
 import com.example.registration_service.domain.model.aggregate.RegistrationCampaign;
-import com.example.registration_service.domain.model.valueobject.CampaignStatus;
+import com.example.registration_service.domain.model.valueobject.PaymentProvider;
 import com.example.registration_service.domain.model.valueobject.RegistrationStatus;
-import com.example.registration_service.domain.model.valueobject.RegistrationTimeWindow;
 import com.example.registration_service.domain.model.valueobject.TicketType;
-import com.example.registration_service.domain.repository.RegistrationCampaignRepository;
-import com.example.registration_service.domain.repository.RegistrationRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-public class RegistrationServiceImpl implements RegistrationUseCase {
+public final class RegistrationServiceImpl
+    implements RegistrationCommandUseCase, RegistrationQueryUseCase {
 
     private final RegistrationCampaignRepository campaignRepo;
     private final RegistrationRepository registrationRepo;
     private final RegistrationMessagePort messagePort;
-     private final TicketCachePort ticketCachePort;
+    private final TicketCachePort ticketCachePort;
+    private final RegistrationIdGenerator idGenerator;
+    private final Clock clock;
+
+    public RegistrationServiceImpl(
+        RegistrationCampaignRepository campaignRepo,
+        RegistrationRepository registrationRepo,
+        RegistrationMessagePort messagePort,
+        TicketCachePort ticketCachePort,
+        RegistrationIdGenerator idGenerator,
+        Clock clock) {
+        this.campaignRepo = Objects.requireNonNull(campaignRepo);
+        this.registrationRepo = Objects.requireNonNull(registrationRepo);
+        this.messagePort = Objects.requireNonNull(messagePort);
+        this.ticketCachePort = Objects.requireNonNull(ticketCachePort);
+        this.idGenerator = Objects.requireNonNull(idGenerator);
+        this.clock = Objects.requireNonNull(clock);
+    }
 
     @Override
-    @Transactional
-    public UUID reserveTicket(ReserveTicketDTO command) {
-        RegistrationCampaign campaign = campaignRepo.findByIdForUpdate(command.getCampaignId())
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
+    public UUID reserveTicket(ReserveTicketCommand command) {
+        Objects.requireNonNull(command, "command không được null");
 
-        // Có còn chỗ không? Có đúng giờ không?
-        campaign.reserveTicket(LocalDateTime.now());
+        RegistrationCampaign campaign = campaignRepo
+            .findByIdForUpdate(command.campaignId())
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Không tìm thấy Chiến dịch bán vé"
+            ));
 
         boolean isFree = campaign.getTicketType() == TicketType.FREE;
-        Registration registration = Registration.createNew(command.getCampaignId(), command.getUserId(), isFree);
+        PaymentProvider provider = PaymentProvider.of(
+            command.providerCode()
+        );
+
+        if (!isFree && provider == null) {
+            throw new IllegalArgumentException(
+                "Vé thu phí bắt buộc phải chọn cổng thanh toán"
+            );
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        campaign.reserveTicket(now);
+
+        Registration registration = Registration.createNew(
+            idGenerator.nextId(),
+            command.campaignId(),
+            command.userId(),
+            isFree,
+            now
+        );
 
         campaignRepo.save(campaign);
         registrationRepo.save(registration);
 
-        // Nếu là vé PAID → Saga, bắn Event để Payment Service tạo giao dịch
-        if (!isFree) {
-            if (command.getProvider() == null) {
-                throw new IllegalArgumentException("Vé thu phí bắt buộc phải chọn cổng thanh toán (provider)");
-            }
-            messagePort.publishRegistrationRequested(registration, campaign.getPrice(), command.getProvider().getCode());
-        }
-        // Nếu là vé FREE → Tự confirm luôn, bắn Event thông báo
-        else {
+        if (isFree) {
             messagePort.publishRegistrationConfirmed(registration);
+        } else {
+            messagePort.publishRegistrationRequested(
+                registration,
+                campaign.getPrice(),
+                provider.getCode()
+            );
         }
 
         return registration.getRegistrationId();
     }
 
     @Override
-    @Transactional
     public void confirmRegistration(UUID registrationId) {
-        Registration registration = registrationRepo.findById(registrationId)
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mã đăng ký"));
+        Registration registration = registrationRepo
+            .findById(registrationId)
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Không tìm thấy mã đăng ký"
+            ));
 
         registration.confirm();
         registrationRepo.save(registration);
-
         messagePort.publishRegistrationConfirmed(registration);
     }
 
     @Override
-    @Transactional
-    public void cancelRegistration(UUID registrationId, String reason) {
-        Registration registration = registrationRepo.findById(registrationId)
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mã đăng ký"));
+    public RegistrationResult cancelRegistration(
+        CancelRegistrationCommand command) {
+        Registration registration = registrationRepo
+            .findById(command.registrationId())
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Không tìm thấy mã đăng ký"
+            ));
 
-        registration.cancel(reason);
+        registration.cancel(command.reason());
 
-        RegistrationCampaign campaign = campaignRepo.findById(registration.getCampaignId()).get();
+        RegistrationCampaign campaign = campaignRepo
+            .findById(registration.getCampaignId())
+            .orElseThrow(() -> new IllegalStateException(
+                "Không tìm thấy chiến dịch của đơn đăng ký"
+            ));
+
         campaign.releaseTicket();
-
         registrationRepo.save(registration);
         campaignRepo.save(campaign);
+
+        return toResult(registration);
     }
 
     @Override
-    @Transactional
-    public void openRegistration(UUID campaignId) {
-        RegistrationCampaign campaign = campaignRepo.findById(campaignId)
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
-        campaign.openManually(LocalDateTime.now());
-        campaignRepo.save(campaign);
-    }
-
-    @Override
-    @Transactional
-    public void closeRegistration(UUID campaignId) {
-        RegistrationCampaign campaign = campaignRepo.findById(campaignId)
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
-        campaign.closeManually(LocalDateTime.now());
-        campaignRepo.save(campaign);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Registration getRegistrationById(UUID registrationId) {
+    public RegistrationResult getRegistrationById(
+        UUID registrationId) {
         return registrationRepo.findById(registrationId)
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn đăng ký này"));
+            .map(this::toResult)
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Không tìm thấy đơn đăng ký này"
+            ));
     }
+
     @Override
-    @Transactional(readOnly = true)
-    public List<Registration> getRegistrations(UUID campaignId, UUID userId, RegistrationStatus status) {
-        return registrationRepo.findByFilters(campaignId, userId, status);
+    public List<RegistrationResult> getRegistrations(
+        RegistrationFilter filter) {
+        Objects.requireNonNull(filter, "filter không được null");
+
+        RegistrationStatus status = filter.statusCode() == null
+            ? null
+            : RegistrationStatus.of(filter.statusCode());
+
+        return registrationRepo.findByFilters(
+                filter.campaignId(),
+                filter.userId(),
+                status
+            )
+            .stream()
+            .map(this::toResult)
+            .toList();
     }
 
     @Override
@@ -122,34 +168,69 @@ public class RegistrationServiceImpl implements RegistrationUseCase {
     }
 
     @Override
-    @Transactional
-    public void reserveTicketAsync(ReserveTicketDTO command) {
-        RegistrationCampaign campaign = campaignRepo.findById(command.getCampaignId())
-            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sự kiện"));
+    public void reserveTicketAsync(ReserveTicketCommand command) {
+        RegistrationCampaign campaign = campaignRepo
+            .findById(command.campaignId())
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Không tìm thấy sự kiện"
+            ));
 
-        campaign.reserveTicket(LocalDateTime.now());
-        boolean isAvailable = ticketCachePort.decrementTicket(command.getCampaignId());
+        campaign.reserveTicket(LocalDateTime.now(clock));
+
+        boolean isAvailable = ticketCachePort.decrementTicket(
+            command.campaignId()
+        );
         if (!isAvailable) {
-            throw new IllegalStateException("Rất tiếc, sự kiện đã bán hết vé!");
+            throw new IllegalStateException(
+                "Rất tiếc, sự kiện đã bán hết vé!"
+            );
         }
-        ticketCachePort.setReservationStatus(command.getCampaignId(), command.getUserId(), "PENDING");
+
+        ticketCachePort.setReservationStatus(
+            command.campaignId(),
+            command.userId(),
+            "PENDING"
+        );
         messagePort.publishAsyncReserveTicketCommand(command);
     }
 
     @Override
-    public String getReservationStatus(UUID campaignId, UUID userId) {
-        String status = ticketCachePort.getReservationStatus(campaignId, userId);
-        if (status == null) return "NOT_FOUND";
-        return status;
+    public String getReservationStatus(
+        UUID campaignId,
+        UUID userId) {
+        String status = ticketCachePort.getReservationStatus(
+            campaignId,
+            userId
+        );
+        return status == null ? "NOT_FOUND" : status;
     }
 
     @Override
-    public void processAsyncReservation(ReserveTicketDTO command) {
+    public void processAsyncReservation(ReserveTicketCommand command) {
         try {
-            UUID registrationId = this.reserveTicket(command);
-            ticketCachePort.setReservationStatus(command.getCampaignId(), command.getUserId(), "SUCCESS:" + registrationId);
-        } catch (Exception e) {
-            ticketCachePort.setReservationStatus(command.getCampaignId(), command.getUserId(), "FAILED:" + e.getMessage());
+            UUID registrationId = reserveTicket(command);
+            ticketCachePort.setReservationStatus(
+                command.campaignId(),
+                command.userId(),
+                "SUCCESS:" + registrationId
+            );
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            ticketCachePort.setReservationStatus(
+                command.campaignId(),
+                command.userId(),
+                "FAILED:" + e.getMessage()
+            );
         }
+    }
+
+    private RegistrationResult toResult(Registration registration) {
+        return new RegistrationResult(
+            registration.getRegistrationId(),
+            registration.getCampaignId(),
+            registration.getUserId(),
+            registration.getStatus().getCode(),
+            registration.getCancelReason(),
+            registration.getRegisteredAt()
+        );
     }
 }

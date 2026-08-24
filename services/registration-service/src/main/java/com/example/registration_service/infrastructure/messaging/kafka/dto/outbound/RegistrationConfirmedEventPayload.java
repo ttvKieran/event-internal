@@ -1,5 +1,5 @@
 // RegistrationConfirmedEventPayload.java
-package com.example.registration_service.application.dto.message;
+package com.example.registration_service.infrastructure.messaging.kafka.dto.outbound;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

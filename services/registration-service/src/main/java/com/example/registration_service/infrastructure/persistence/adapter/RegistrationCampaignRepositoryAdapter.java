@@ -1,7 +1,7 @@
 package com.example.registration_service.infrastructure.persistence.adapter;
 
 import com.example.registration_service.domain.model.aggregate.RegistrationCampaign;
-import com.example.registration_service.domain.repository.RegistrationCampaignRepository;
+import com.example.registration_service.application.port.out.RegistrationCampaignRepository;
 import com.example.registration_service.infrastructure.persistence.entity.RegistrationCampaignEntity;
 import com.example.registration_service.infrastructure.persistence.mapper.RegistrationCampaignMapper;
 import com.example.registration_service.infrastructure.persistence.repository.JpaRegistrationCampaignRepository;

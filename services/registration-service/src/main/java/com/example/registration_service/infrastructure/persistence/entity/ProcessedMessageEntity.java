@@ -20,9 +20,9 @@ import java.time.Instant;
 public class ProcessedMessageEntity {
 
     @Id
-    @Column(length = 255)
+    @Column(name = "message_id", length = 255, nullable = false)
     private String messageId;
 
-    @Column(nullable = false)
+    @Column(name = "processed_at", nullable = false)
     private Instant processedAt;
 }

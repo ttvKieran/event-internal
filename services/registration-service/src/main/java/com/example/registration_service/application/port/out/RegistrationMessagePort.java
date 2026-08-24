@@ -1,6 +1,6 @@
 package com.example.registration_service.application.port.out;
 
-import com.example.registration_service.application.dto.ReserveTicketDTO;
+import com.example.registration_service.application.model.command.ReserveTicketCommand;
 import com.example.registration_service.domain.model.aggregate.Registration;
 
 public interface RegistrationMessagePort {
@@ -26,5 +26,5 @@ public interface RegistrationMessagePort {
     /**
      * Bắn lệnh đặt vé vào Outbox để Worker tự động xử lý dần ở background.
      */
-    void publishAsyncReserveTicketCommand(ReserveTicketDTO command);
+    void publishAsyncReserveTicketCommand(ReserveTicketCommand command);
 }

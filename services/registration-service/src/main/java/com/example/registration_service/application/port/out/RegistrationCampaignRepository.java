@@ -1,11 +1,14 @@
-package com.example.registration_service.domain.repository;
+package com.example.registration_service.application.port.out;
 
 import com.example.registration_service.domain.model.aggregate.RegistrationCampaign;
+
 import java.util.Optional;
 import java.util.UUID;
 
 public interface RegistrationCampaignRepository {
     Optional<RegistrationCampaign> findById(UUID campaignId);
+
     Optional<RegistrationCampaign> findByIdForUpdate(UUID campaignId);
+
     void save(RegistrationCampaign campaign);
 }

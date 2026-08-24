@@ -1,18 +1,18 @@
-package com.example.registration_service.application.dto.message;
+package com.example.registration_service.infrastructure.messaging.kafka.dto.outbound;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class RegistrationRequestedEventPayload {
     private UUID registrationId;
     private UUID campaignId;
     private UUID employeeId;
-    private java.math.BigDecimal amount;
+    private BigDecimal amount;
     private String provider;
     private String registeredAt;
 }
