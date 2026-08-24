@@ -45,7 +45,7 @@ spring:
 
         # Registration Service
         - id: registration-service-organizer
-          uri: ${REGISTRATION_SERVICE_URL:http://registration-service:8084}
+          uri: ${REGISTRATION_SERVICE_URL:http://registration-service:8083}
           predicates:
             - Path=/api/v1/events/{eventId}/registration/open, /api/v1/events/{eventId}/registration/close
             - Method=POST
@@ -54,7 +54,7 @@ spring:
             - RoleCheck=ORGANIZER
 
         - id: registration-service-authenticated
-          uri: ${REGISTRATION_SERVICE_URL:http://registration-service:8084}
+          uri: ${REGISTRATION_SERVICE_URL:http://registration-service:8083}
           predicates:
             - Path=/api/v1/registrations/**
           filters:
@@ -87,12 +87,12 @@ spring:
 
         # Payment Service
         - id: payment-service-public
-          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8087}
+          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8084}
           predicates:
             - Path=/api/v1/payments/vnpay-return
 
         - id: payment-service-authenticated
-          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8087}
+          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8084}
           predicates:
             - Path=/api/v1/payments/{registrationId}
           filters:
@@ -100,7 +100,7 @@ spring:
 
         # Resource Service
         - id: resource-service-route
-          uri: ${RESOURCE_SERVICE_URL:http://resource-service:8089}
+          uri: ${RESOURCE_SERVICE_URL:http://resource-service:8081}
           predicates:
             - Path=/v1/resources/**
           filters:
