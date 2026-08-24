@@ -14,12 +14,12 @@ spring:
       routes:
         # IAM Service
         - id: iam-public
-          uri: ${IAM_SERVICE_URL:http://localhost:8085}
+          uri: ${IAM_SERVICE_URL:http://iam-service:8085}
           predicates:
             - Path=/v1/auth/login, /v1/auth/refresh-token
 
         - id: iam-secured
-          uri: ${IAM_SERVICE_URL:http://localhost:8085}
+          uri: ${IAM_SERVICE_URL:http://iam-service:8085}
           predicates:
             - Path=/v1/auth/me, /v1/Employees/**, /v1/auth/logout
           filters:
@@ -27,7 +27,7 @@ spring:
 
         # Event Service
         - id: event-service-authenticated
-          uri: ${EVENT_SERVICE_URL:http://localhost:8082}
+          uri: ${EVENT_SERVICE_URL:http://event-service:8082}
           predicates:
             - Path=/api/v1/events, /api/v1/events/{eventId}
             - Method=GET
@@ -35,7 +35,7 @@ spring:
             - JwtAuthenticationFilter
 
         - id: event-service-organizer
-          uri: ${EVENT_SERVICE_URL:http://localhost:8082}
+          uri: ${EVENT_SERVICE_URL:http://event-service:8082}
           predicates:
             - Path=/api/v1/events/**
             - Method=POST, PUT, PATCH, DELETE
@@ -45,7 +45,7 @@ spring:
 
         # Registration Service
         - id: registration-service-organizer
-          uri: ${REGISTRATION_SERVICE_URL:http://localhost:8084}
+          uri: ${REGISTRATION_SERVICE_URL:http://registration-service:8084}
           predicates:
             - Path=/api/v1/events/{eventId}/registration/open, /api/v1/events/{eventId}/registration/close
             - Method=POST
@@ -54,7 +54,7 @@ spring:
             - RoleCheck=ORGANIZER
 
         - id: registration-service-authenticated
-          uri: ${REGISTRATION_SERVICE_URL:http://localhost:8084}
+          uri: ${REGISTRATION_SERVICE_URL:http://registration-service:8084}
           predicates:
             - Path=/api/v1/registrations/**
           filters:
@@ -62,7 +62,7 @@ spring:
 
         # Attendance Service
         - id: attendance-service-organizer
-          uri: ${ATTENDANCE_SERVICE_URL:http://localhost:8086}
+          uri: ${ATTENDANCE_SERVICE_URL:http://attendance-service:8086}
           predicates:
             - Path=/v1/attendance/events/{eventId}/session
           filters:
@@ -70,7 +70,7 @@ spring:
             - RoleCheck=ORGANIZER
 
         - id: attendance-service-authenticated
-          uri: ${ATTENDANCE_SERVICE_URL:http://localhost:8086}
+          uri: ${ATTENDANCE_SERVICE_URL:http://attendance-service:8086}
           predicates:
             - Path=/v1/attendance/check-in/scan
           filters:
@@ -78,7 +78,7 @@ spring:
 
         # Analytics Service
         - id: analytics-service-organizer
-          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8088}
+          uri: ${ANALYTICS_SERVICE_URL:http://analytics-service:8088}
           predicates:
             - Path=/v1/analytics/**
           filters:
@@ -87,12 +87,12 @@ spring:
 
         # Payment Service
         - id: payment-service-public
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8087}
+          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8087}
           predicates:
             - Path=/api/v1/payments/vnpay-return
 
         - id: payment-service-authenticated
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8087}
+          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8087}
           predicates:
             - Path=/api/v1/payments/{registrationId}
           filters:
@@ -100,7 +100,7 @@ spring:
 
         # Resource Service
         - id: resource-service-route
-          uri: ${RESOURCE_SERVICE_URL:http://localhost:8089}
+          uri: ${RESOURCE_SERVICE_URL:http://resource-service:8089}
           predicates:
             - Path=/v1/resources/**
           filters:
