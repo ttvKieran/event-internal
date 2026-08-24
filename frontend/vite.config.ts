@@ -13,26 +13,26 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Event Service (Bypass Gateway vì Backend có lỗi lệch path /v1 và /api/v1)
+      // 1. Chuyển tất cả Event Service qua Gateway (8000)
       '/api/v1/events': {
-        target: 'http://localhost:8082',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/api/v1/campaigns': {
-        target: 'http://localhost:8082',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      // Registration Service (Bypass Gateway)
+      // 2. Chuyển Registration Service qua Gateway (8000)
       '/api/v1/registrations': {
-        target: 'http://localhost:8083',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      // Payment Service (Bypass Gateway)
+      // 3. Chuyển Payment Service qua Gateway (8000)
       '/api/v1/payments': {
-        target: 'http://localhost:8084',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      // Auth / IAM Service (Đi qua Gateway vì path đã khớp chuẩn)
+      // 4. IAM Service qua Gateway (Đã cấu hình sẵn rewrite)
       '/api/v1/auth': {
         target: 'http://localhost:8000',
         changeOrigin: true,
@@ -42,6 +42,19 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/v1\/Employees/, '/v1/Employees'),
+      },
+      // 5. MỚI THÊM: Chuyển Analytics Service qua Gateway
+      // Frontend gọi /api/v1/analytics/... -> Gateway nhận /v1/analytics/...
+      '/api/v1/analytics': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/v1\/analytics/, '/v1/analytics'),
+      },
+      // 6. Chuyển Attendance Service qua Gateway
+      '/api/v1/attendance': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/v1\/attendance/, '/v1/attendance'),
       }
     }
   }

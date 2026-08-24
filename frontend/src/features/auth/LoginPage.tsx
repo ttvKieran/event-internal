@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +26,8 @@ export function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
   const { login } = useAuthStore();
+  const location = useLocation();
+  const from = location.state?.from?.pathname + (location.state?.from?.search || '') || null;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -45,7 +47,10 @@ export function LoginPage() {
       
       // Redirect based on role
       const roleName = typeof data.employee.role === 'object' ? data.employee.role.name : data.employee.role;
-      if (roleName === 'ORGANIZER' || roleName === 'ADMIN') {
+      
+      if (from && from !== '/login') {
+        navigate(from, { replace: true });
+      } else if (roleName === 'ORGANIZER' || roleName === 'ADMIN') {
         navigate('/admin/events');
       } else {
         navigate('/events');
