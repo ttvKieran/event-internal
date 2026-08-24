@@ -15,7 +15,7 @@ public class AnalyticsController {
     private final QueryMetricsUseCase queryMetricsUseCase;
 
     @GetMapping("/events/{eventId}/dashboard")
-    public ResponseEntity<DashboardMetricsResponse> getDashboardMetrics(@PathVariable UUID eventId) {
+    public ResponseEntity<ApiResponse<DashboardMetricsResponse>> getDashboardMetrics(@PathVariable UUID eventId) {
         EventMetrics metrics = queryMetricsUseCase.getMetrics(eventId);
         DashboardMetricsResponse response = DashboardMetricsResponse.builder()
                 .eventId(metrics.getEventId())
@@ -28,11 +28,11 @@ public class AnalyticsController {
                 .fillRate(metrics.getFillRate())
                 .updatedAt(metrics.getUpdatedAt().toString())
                 .build();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @GetMapping("/events/{eventId}/registration-metrics")
-    public ResponseEntity<RegistrationMetricsResponse> getRegistrationMetrics(@PathVariable UUID eventId) {
+    public ResponseEntity<ApiResponse<RegistrationMetricsResponse>> getRegistrationMetrics(@PathVariable UUID eventId) {
         EventMetrics metrics = queryMetricsUseCase.getMetrics(eventId);
         RegistrationMetricsResponse response = RegistrationMetricsResponse.builder()
                 .eventId(metrics.getEventId())
@@ -42,11 +42,11 @@ public class AnalyticsController {
                 .fillRate(metrics.getFillRate())
                 .updatedAt(metrics.getUpdatedAt().toString())
                 .build();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @GetMapping("/events/{eventId}/attendance-metrics")
-    public ResponseEntity<AttendanceMetricsResponse> getAttendanceMetrics(@PathVariable UUID eventId) {
+    public ResponseEntity<ApiResponse<AttendanceMetricsResponse>> getAttendanceMetrics(@PathVariable UUID eventId) {
         EventMetrics metrics = queryMetricsUseCase.getMetrics(eventId);
         AttendanceMetricsResponse response = AttendanceMetricsResponse.builder()
                 .eventId(metrics.getEventId())
@@ -54,6 +54,6 @@ public class AnalyticsController {
                 .checkInRate(metrics.getCheckInRate())
                 .updatedAt(metrics.getUpdatedAt().toString())
                 .build();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

@@ -63,7 +63,7 @@ public class MetricsService implements UpdateMetricsUseCase, QueryMetricsUseCase
     @Override
     @Transactional(readOnly = true)
     public EventMetrics getMetrics(UUID eventId) {
-        return getExistingMetrics(eventId);
+        return getOrInitialize(eventId);
     }
 
     private EventMetrics getOrInitialize(UUID eventId) {

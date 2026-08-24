@@ -9,6 +9,7 @@ import { OrganizerEventList } from './features/events/OrganizerEventList'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { EventDetailPage } from './features/events/EventDetailPage'
 import { PaymentResultPage } from './features/payment/PaymentResultPage'
+import { AnalyticsDashboardPage } from './features/analytics/AnalyticsDashboardPage'
 import { Toaster } from '@/components/ui/sonner'
 
 // Protected Route Component
@@ -57,6 +58,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ORGANIZER']}>
                 <OrganizerEventList />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/events/:eventId/dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['ORGANIZER']}>
+                <AnalyticsDashboardPage />
               </ProtectedRoute>
             } 
           />

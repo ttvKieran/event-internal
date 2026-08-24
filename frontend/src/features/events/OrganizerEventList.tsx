@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Settings, Globe, Trash } from 'lucide-react';
+import { Plus, Settings, Globe, Trash, BarChart } from 'lucide-react';
 import { useEvents } from './api/useEvents';
 import { formatDate } from '@/utils/formatters';
 import { type Event } from '@/types/event';
@@ -105,7 +105,7 @@ export function OrganizerEventList() {
             ) : (
               // Data rows
               data.data.map((event) => (
-                <TableRow key={event.eventId} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate(`/admin/events/${event.eventId}`)}>
+                <TableRow key={event.eventId} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate(`/admin/events/${event.eventId}/dashboard`)}>
                   <TableCell className="font-medium">
                     <div className="line-clamp-1">{event.title}</div>
                     <div className="text-xs text-slate-500 mt-1 font-normal line-clamp-1">{event.location}</div>
@@ -125,6 +125,9 @@ export function OrganizerEventList() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="outline" size="icon" title="Xem thống kê" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={(e) => { e.stopPropagation(); navigate(`/admin/events/${event.eventId}/dashboard`); }}>
+                        <BarChart className="h-4 w-4" />
+                      </Button>
                       {event.status === 'DRAFT' && (
                         <Button variant="outline" size="icon" title="Cấu hình sự kiện" onClick={(e) => openConfig(e, event)}>
                           <Settings className="h-4 w-4 text-slate-600" />

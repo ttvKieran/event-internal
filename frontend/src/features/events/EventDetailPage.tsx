@@ -172,11 +172,9 @@ export function EventDetailPage() {
               className="w-full h-full object-cover"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
-                if (img.src.endsWith('.png')) {
-                  img.src = img.src.replace('.png', '.jpg');
-                } else {
-                  const hash = event.eventId ? Math.abs(event.eventId.charCodeAt(0)) % 5 : 0;
-                  img.src = DEFAULT_FALLBACK_BANNERS[hash];
+                const fallbackUrl = DEFAULT_FALLBACK_BANNERS[event.eventId ? Math.abs(event.eventId.charCodeAt(0)) % 5 : 0];
+                if (img.src !== fallbackUrl) {
+                  img.src = fallbackUrl;
                 }
               }}
             />
