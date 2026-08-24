@@ -1,0 +1,113 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: '*'
+            allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+            allowed-headers: '*'
+      routes:
+        # IAM Service
+        - id: iam-public
+          uri: ${IAM_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/v1/auth/login, /v1/auth/refresh-token
+
+        - id: iam-secured
+          uri: ${IAM_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/v1/auth/me, /v1/Employees/**, /v1/auth/logout
+          filters:
+            - JwtAuthenticationFilter
+
+        # Event Service
+        - id: event-service-authenticated
+          uri: ${EVENT_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/events, /api/v1/events/{eventId}
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        - id: event-service-organizer
+          uri: ${EVENT_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/events/**
+            - Method=POST, PUT, PATCH, DELETE
+          filters:
+            - JwtAuthenticationFilter
+            - RoleCheck=ORGANIZER
+
+        # Registration Service
+        - id: registration-service-organizer
+          uri: ${REGISTRATION_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/events/{eventId}/registration/open, /api/v1/events/{eventId}/registration/close
+            - Method=POST
+          filters:
+            - JwtAuthenticationFilter
+            - RoleCheck=ORGANIZER
+
+        - id: registration-service-authenticated
+          uri: ${REGISTRATION_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/registrations/**
+          filters:
+            - JwtAuthenticationFilter
+
+        # Attendance Service
+        - id: attendance-service-organizer
+          uri: ${ATTENDANCE_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/v1/attendance/events/{eventId}/session
+          filters:
+            - JwtAuthenticationFilter
+            - RoleCheck=ORGANIZER
+
+        - id: attendance-service-authenticated
+          uri: ${ATTENDANCE_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/v1/attendance/check-in/scan
+          filters:
+            - JwtAuthenticationFilter
+
+        # Analytics Service
+        - id: analytics-service-organizer
+          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8088}
+          predicates:
+            - Path=/v1/analytics/**
+          filters:
+            - JwtAuthenticationFilter
+            - RoleCheck=ORGANIZER
+
+        # Payment Service
+        - id: payment-service-public
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8087}
+          predicates:
+            - Path=/api/v1/payments/vnpay-return
+
+        - id: payment-service-authenticated
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8087}
+          predicates:
+            - Path=/api/v1/payments/{registrationId}
+          filters:
+            - JwtAuthenticationFilter
+
+        # Resource Service
+        - id: resource-service-route
+          uri: ${RESOURCE_SERVICE_URL:http://localhost:8089}
+          predicates:
+            - Path=/v1/resources/**
+          filters:
+            - JwtAuthenticationFilter
+
+server:
+  port: 8000
+
+jwt:
+  secret: ${JWT_SECRET}
