@@ -99,6 +99,33 @@ class RegistrationServiceImplTest {
     }
 
     @Test
+    void freeTicketIgnoresProviderSentByClient() {
+        RegistrationCampaign campaign = freeCampaign();
+        when(campaignRepository.findByIdForUpdate(CAMPAIGN_ID))
+            .thenReturn(Optional.of(campaign));
+        when(idGenerator.nextId()).thenReturn(REGISTRATION_ID);
+
+        UUID result = service.reserveTicket(
+            new ReserveTicketCommand(
+                CAMPAIGN_ID,
+                USER_ID,
+                "PROVIDER_NOT_USED_FOR_FREE_TICKET"
+            )
+        );
+
+        assertEquals(REGISTRATION_ID, result);
+        assertEquals(1, campaign.getCurrentParticipants());
+        verify(messagePort).publishRegistrationConfirmed(
+            any(Registration.class)
+        );
+        verify(messagePort, never()).publishRegistrationRequested(
+            any(Registration.class),
+            any(),
+            any()
+        );
+    }
+
+    @Test
     void queryReturnsApplicationResultInsteadOfDomainAggregate() {
         LocalDateTime registeredAt = LocalDateTime.now(CLOCK);
         Registration registration = Registration.reconstitute(
@@ -177,6 +204,22 @@ class RegistrationServiceImplTest {
             maxParticipants,
             currentParticipants,
             BigDecimal.TEN,
+            RegistrationTimeWindow.of(
+                now.minusHours(1),
+                now.plusHours(1)
+            ),
+            CampaignStatus.ACTIVE
+        );
+    }
+
+    private RegistrationCampaign freeCampaign() {
+        LocalDateTime now = LocalDateTime.now(CLOCK);
+        return RegistrationCampaign.reconstitute(
+            CAMPAIGN_ID,
+            TicketType.FREE,
+            10,
+            0,
+            BigDecimal.ZERO,
             RegistrationTimeWindow.of(
                 now.minusHours(1),
                 now.plusHours(1)

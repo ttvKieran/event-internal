@@ -56,18 +56,12 @@ public final class RegistrationServiceImpl
             .findByIdForUpdate(command.campaignId())
             .orElseThrow(() -> new IllegalArgumentException(
                 "Không tìm thấy Chiến dịch bán vé"
-            ));
+        ));
 
         boolean isFree = campaign.getTicketType() == TicketType.FREE;
-        PaymentProvider provider = PaymentProvider.of(
-            command.providerCode()
-        );
-
-        if (!isFree && provider == null) {
-            throw new IllegalArgumentException(
-                "Vé thu phí bắt buộc phải chọn cổng thanh toán"
-            );
-        }
+        PaymentProvider provider = isFree
+            ? null
+            : requirePaymentProvider(command.providerCode());
 
         LocalDateTime now = LocalDateTime.now(clock);
         campaign.reserveTicket(now);
@@ -232,5 +226,16 @@ public final class RegistrationServiceImpl
             registration.getCancelReason(),
             registration.getRegisteredAt()
         );
+    }
+
+    private PaymentProvider requirePaymentProvider(
+        String providerCode) {
+        PaymentProvider provider = PaymentProvider.of(providerCode);
+        if (provider == null) {
+            throw new IllegalArgumentException(
+                "Vé thu phí bắt buộc phải chọn cổng thanh toán"
+            );
+        }
+        return provider;
     }
 }
