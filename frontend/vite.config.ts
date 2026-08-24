@@ -49,6 +49,12 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/v1\/analytics/, '/v1/analytics'),
+      },
+      // 6. Chuyển Attendance Service qua Gateway
+      '/api/v1/attendance': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/v1\/attendance/, '/v1/attendance'),
       }
     }
   }

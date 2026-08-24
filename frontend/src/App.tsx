@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './store/useAuthStore'
 
 import { AuthLayout } from './layouts/AuthLayout'
@@ -10,14 +10,16 @@ import { ProfilePage } from './features/profile/ProfilePage'
 import { EventDetailPage } from './features/events/EventDetailPage'
 import { PaymentResultPage } from './features/payment/PaymentResultPage'
 import { AnalyticsDashboardPage } from './features/analytics/AnalyticsDashboardPage'
+import { CheckinProcessPage } from './features/attendance/components/CheckinProcessPage'
 import { Toaster } from '@/components/ui/sonner'
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) {
   const { isAuthenticated, employee } = useAuthStore()
+  const location = useLocation()
   
   if (!isAuthenticated || !employee) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
   
   const roleName = typeof employee.role === 'object' ? employee.role.name : employee.role;
@@ -51,6 +53,7 @@ function App() {
           <Route path="/events" element={<EmployeeEventList />} />
           <Route path="/events/:id" element={<EventDetailPage />} />
           <Route path="/payment/result" element={<PaymentResultPage />} />
+          <Route path="/checkin-process" element={<CheckinProcessPage />} />
           
           {/* Organizer Routes */}
           <Route 
