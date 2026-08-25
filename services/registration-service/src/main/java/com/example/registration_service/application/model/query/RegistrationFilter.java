@@ -9,8 +9,7 @@ public record RegistrationFilter(
     String statusCode
 ) {
     public RegistrationFilter {
-        statusCode = statusCode == null || statusCode.isBlank()
-            ? null
+        statusCode = statusCode == null || statusCode.isBlank() ? null
             : statusCode.trim().toUpperCase(Locale.ROOT);
     }
 }

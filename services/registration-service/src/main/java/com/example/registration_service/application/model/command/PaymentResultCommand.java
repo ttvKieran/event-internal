@@ -10,13 +10,11 @@ public sealed interface PaymentResultCommand {
         String messageId,
         UUID registrationId,
         UUID paymentId
-    ) implements PaymentResultCommand {
-    }
+    ) implements PaymentResultCommand { }
 
     record Failed(
         String messageId,
         UUID registrationId,
         String reason
-    ) implements PaymentResultCommand {
-    }
+    ) implements PaymentResultCommand { }
 }

@@ -8,17 +8,14 @@ import com.example.registration_service.application.port.out.ProcessedMessageSto
 import java.time.Clock;
 import java.util.Objects;
 
-public final class HandleEventLifecycleInteractor
-    implements HandleEventLifecycle {
+public final class HandleEventLifecycleInteractor implements HandleEventLifecycle {
 
     private final ProcessedMessageStore processedMessages;
     private final RegistrationCampaignUseCase campaigns;
     private final Clock clock;
 
-    public HandleEventLifecycleInteractor(
-        ProcessedMessageStore processedMessages,
-        RegistrationCampaignUseCase campaigns,
-        Clock clock) {
+    public HandleEventLifecycleInteractor(ProcessedMessageStore processedMessages,
+        RegistrationCampaignUseCase campaigns, Clock clock) {
         this.processedMessages = Objects.requireNonNull(processedMessages);
         this.campaigns = Objects.requireNonNull(campaigns);
         this.clock = Objects.requireNonNull(clock);
@@ -27,15 +24,8 @@ public final class HandleEventLifecycleInteractor
     @Override
     public void handle(EventLifecycleCommand command) {
         Objects.requireNonNull(command, "command must not be null");
-
-        boolean firstDelivery = processedMessages.tryClaim(
-            command.messageId(),
-            clock.instant()
-        );
-
-        if (!firstDelivery) {
-            return;
-        }
+        boolean firstDelivery = processedMessages.tryClaim(command.messageId(), clock.instant());
+        if (!firstDelivery) return;
 
         switch (command) {
             case EventLifecycleCommand.ConfigureCampaign configure ->

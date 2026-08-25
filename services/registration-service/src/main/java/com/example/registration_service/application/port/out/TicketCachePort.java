@@ -7,4 +7,5 @@ public interface TicketCachePort {
     boolean decrementTicket(UUID campaignId);
     void setReservationStatus(UUID campaignId, UUID userId, String status);
     String getReservationStatus(UUID campaignId, UUID userId);
+    void incrementTicket(UUID campaignId);
 }

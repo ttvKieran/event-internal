@@ -9,21 +9,18 @@ public sealed interface RegistrationCommand {
     record ConfirmPaid(
         String messageId,
         UUID registrationId
-    ) implements RegistrationCommand {
-    }
+    ) implements RegistrationCommand { }
 
     record RollbackPaid(
         String messageId,
         UUID registrationId,
         String reason
-    ) implements RegistrationCommand {
-    }
+    ) implements RegistrationCommand { }
 
     record ReserveTicketAsync(
         String messageId,
         UUID campaignId,
         UUID userId,
         String providerCode
-    ) implements RegistrationCommand {
-    }
+    ) implements RegistrationCommand { }
 }

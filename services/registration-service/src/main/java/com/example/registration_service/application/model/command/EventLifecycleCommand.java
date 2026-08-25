@@ -16,18 +16,15 @@ public sealed interface EventLifecycleCommand {
         BigDecimal price,
         LocalDateTime openAt,
         LocalDateTime closeAt
-    ) implements EventLifecycleCommand {
-    }
+    ) implements EventLifecycleCommand { }
 
     record ActivateCampaign(
         String messageId,
         UUID campaignId
-    ) implements EventLifecycleCommand {
-    }
+    ) implements EventLifecycleCommand { }
 
     record CancelCampaign(
         String messageId,
         UUID campaignId
-    ) implements EventLifecycleCommand {
-    }
+    ) implements EventLifecycleCommand { }
 }

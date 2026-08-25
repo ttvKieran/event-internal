@@ -43,4 +43,10 @@ public class TicketCacheAdapter implements TicketCachePort {
         String key = "ticket_status:" + campaignId + ":" + userId;
         return redisTemplate.opsForValue().get(key);
     }
+
+    @Override
+    public void incrementTicket(UUID campaignId) {
+        String key = "campaign:tickets:" + campaignId;
+        redisTemplate.opsForValue().increment(key);
+    }
 }

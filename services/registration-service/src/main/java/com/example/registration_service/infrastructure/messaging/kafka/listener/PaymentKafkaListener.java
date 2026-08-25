@@ -26,13 +26,9 @@ public class PaymentKafkaListener {
     private final ObjectMapper objectMapper;
     private final HandlePaymentResult handlePaymentResult;
 
-    @KafkaListener(
-        topics = "Payment",
-        groupId = "${spring.kafka.consumer.group-id}"
-    )
+    @KafkaListener(topics = "Payment", groupId = "${spring.kafka.consumer.group-id}")
     public void onPaymentEvent(ConsumerRecord<String, String> record) {
         String messageId = "unknown";
-
         try {
             Header typeHeader = record.headers().lastHeader("eventType");
             if (typeHeader == null) {
@@ -40,8 +36,7 @@ public class PaymentKafkaListener {
                 return;
             }
 
-            Header messageIdHeader =
-                record.headers().lastHeader("messageId");
+            Header messageIdHeader = record.headers().lastHeader("messageId");
             if (messageIdHeader == null) {
                 log.warn("[SagaManager] Thiếu header messageId.");
                 return;
@@ -51,56 +46,27 @@ public class PaymentKafkaListener {
             messageId = new String(messageIdHeader.value());
 
             JsonNode root = objectMapper.readTree(record.value());
-            String payload = root.has("payload")
-                ? root.get("payload").asText()
-                : record.value();
+            String payload = root.has("payload") ? root.get("payload").asText() : record.value();
 
             switch (eventType) {
                 case "PaymentSucceededEvent" -> {
                     PaymentSucceededMessage message =
-                        objectMapper.readValue(
-                            payload,
-                            PaymentSucceededMessage.class
-                        );
-
+                        objectMapper.readValue(payload, PaymentSucceededMessage.class);
                     handlePaymentResult.handle(
-                        new PaymentResultCommand.Succeeded(
-                            messageId,
-                            message.getRegistrationId(),
-                            message.getPaymentId()
-                        )
-                    );
+                        new PaymentResultCommand.Succeeded(messageId, message.getRegistrationId(), message.getPaymentId()));
                 }
-
                 case "PaymentFailedEvent" -> {
                     PaymentFailedMessage message =
-                        objectMapper.readValue(
-                            payload,
-                            PaymentFailedMessage.class
-                        );
-
+                        objectMapper.readValue(payload, PaymentFailedMessage.class);
                     handlePaymentResult.handle(
-                        new PaymentResultCommand.Failed(
-                            messageId,
-                            message.getRegistrationId(),
-                            message.getReason()
-                        )
+                        new PaymentResultCommand.Failed(messageId, message.getRegistrationId(), message.getReason())
                     );
                 }
-
-                default ->
-                    log.debug("Bỏ qua event không hỗ trợ: {}", eventType);
+                default -> log.debug("Bỏ qua event không hỗ trợ: {}", eventType);
             }
         } catch (Exception exception) {
-            log.error(
-                "Lỗi xử lý Kafka message {}",
-                messageId,
-                exception
-            );
-            throw new KafkaMessageProcessingException(
-                messageId,
-                exception
-            );
+            log.error("Lỗi xử lý Kafka message {}", messageId, exception);
+            throw new KafkaMessageProcessingException(messageId, exception);
         }
     }
 }

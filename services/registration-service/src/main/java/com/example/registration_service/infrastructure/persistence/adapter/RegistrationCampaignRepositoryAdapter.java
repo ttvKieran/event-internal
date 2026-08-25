@@ -20,8 +20,7 @@ public class RegistrationCampaignRepositoryAdapter implements RegistrationCampai
 
     @Override
     public Optional<RegistrationCampaign> findById(UUID campaignId) {
-        return jpaRepository.findById(campaignId)
-            .map(mapper::toDomain);
+        return jpaRepository.findById(campaignId).map(mapper::toDomain);
     }
 
     @Override

@@ -1,9 +1,8 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, MapPin, Users, Ticket, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, Ticket, Loader2, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/useAuthStore';
-import { registrationApi } from './api/registrationApi';
 import { eventApi } from './api/eventApi';
 import { useFlashSaleRegistration } from './api/useFlashSaleRegistration';
 import { formatDate, formatCurrency } from '@/utils/formatters';
@@ -11,11 +10,15 @@ import { getEventBanner, DEFAULT_FALLBACK_BANNERS } from '@/utils/getEventBanner
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   // Load event details
   const { data, isLoading, isError } = useQuery({
@@ -27,7 +30,19 @@ export function EventDetailPage() {
   const event = data?.data;
 
   // Use the Flash Sale Hook
-  const { handleRegister, regState, registrationId, paymentUrl: fetchedPaymentUrl, errorMessage, isProcessing } = useFlashSaleRegistration(id!, event?.ticketType || 'FREE');
+  const {
+    handleRegister,
+    cancelRegistration,
+    regState,
+    registrationId,
+    registrationStatus,
+    paymentUrl: fetchedPaymentUrl,
+    errorMessage,
+    hasActiveRegistration,
+    isCheckingRegistration,
+    isCancelling,
+    isProcessing,
+  } = useFlashSaleRegistration(id!, event?.ticketType || 'FREE');
 
   if (isLoading) {
     return (
@@ -50,7 +65,7 @@ export function EventDetailPage() {
     );
   }
 
-  if (isError || !data?.data) {
+  if (isError || !event) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
@@ -65,49 +80,66 @@ export function EventDetailPage() {
 
   // Render logic for Registration Button based on regState
   const renderRegisterButton = () => {
-    if (regState === 'SUCCESS') {
+    if (isCheckingRegistration) {
+      return (
+        <Button className="w-full" disabled>
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          Đang kiểm tra đăng ký...
+        </Button>
+      );
+    }
+
+    if (hasActiveRegistration) {
       if (event.ticketType === 'PAID') {
+        const isConfirmed = registrationStatus === 'CONFIRMED';
+
         return (
           <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div className={`${isConfirmed ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-800'} border p-4 rounded-lg flex items-start gap-3`}>
+              <CheckCircle2 className={`h-5 w-5 mt-0.5 ${isConfirmed ? 'text-green-600' : 'text-amber-600'}`} />
               <div>
-                <p className="font-semibold">Đã giữ chỗ thành công (RESERVED)!</p>
+                <p className="font-semibold">
+                  {isConfirmed ? 'Đã đăng ký và thanh toán thành công!' : 'Đã giữ chỗ thành công (RESERVED)!'}
+                </p>
                 <p className="text-sm mt-1">
-                  Vé của bạn đang được giữ chỗ trong <strong>15 phút</strong>. Vui lòng hoàn tất thanh toán qua VNPay để xác nhận vé (CONFIRMED).
+                  {isConfirmed
+                    ? 'Vé trả phí đã được xác nhận. Hiện tại hệ thống chưa hỗ trợ hủy và hoàn tiền trực tuyến.'
+                    : <>Vé của bạn đang được giữ chỗ trong <strong>15 phút</strong>. Vui lòng hoàn tất thanh toán qua VNPay để xác nhận vé.</>}
                 </p>
               </div>
             </div>
 
-            <Button 
-              className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold h-12 text-base shadow-lg shadow-red-600/25 transition-all"
-              onClick={async () => {
-                if (fetchedPaymentUrl) {
-                  window.location.href = fetchedPaymentUrl;
-                  return;
-                }
-
-                if (!registrationId) {
-                  toast.error('Hệ thống chưa hoàn tất ghi nhận đơn đăng ký. Vui lòng thử lại sau giây lát.');
-                  return;
-                }
-
-                try {
-                  const { paymentApi } = await import('@/api/paymentApi');
-                  const res: any = await paymentApi.getPaymentUrl(registrationId);
-                  const url = res?.data?.paymentUrl || res?.paymentUrl;
-                  if (url) {
-                    window.location.href = url;
-                  } else {
-                    toast.error('Chưa tạo được link VNPay. Vui lòng kiểm tra lại Payment Service.');
+            {!isConfirmed && (
+              <Button 
+                className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold h-12 text-base shadow-lg shadow-red-600/25 transition-all"
+                onClick={async () => {
+                  if (fetchedPaymentUrl) {
+                    window.location.href = fetchedPaymentUrl;
+                    return;
                   }
-                } catch (err: any) {
-                  toast.error(err?.message || 'Chưa khởi tạo giao dịch thanh toán hoặc Payment Service chưa mở.');
-                }
-              }}
-            >
-              Thanh toán ngay qua VNPay
-            </Button>
+
+                  if (!registrationId) {
+                    toast.error('Hệ thống chưa hoàn tất ghi nhận đơn đăng ký. Vui lòng thử lại sau giây lát.');
+                    return;
+                  }
+
+                  try {
+                    const { paymentApi } = await import('@/api/paymentApi');
+                    const res: any = await paymentApi.getPaymentUrl(registrationId);
+                    const url = res?.data?.paymentUrl || res?.paymentUrl;
+                    if (url) {
+                      window.location.href = url;
+                    } else {
+                      toast.error('Chưa tạo được link VNPay. Vui lòng kiểm tra lại Payment Service.');
+                    }
+                  } catch (err: any) {
+                    toast.error(err?.message || 'Chưa khởi tạo giao dịch thanh toán hoặc Payment Service chưa mở.');
+                  }
+                }}
+              >
+                Thanh toán ngay qua VNPay
+              </Button>
+            )}
             
             <Button variant="outline" className="w-full" onClick={() => navigate('/events')}>
               Quay lại danh sách
@@ -125,6 +157,14 @@ export function EventDetailPage() {
               <p className="text-sm mt-1">Bạn đã đăng ký giữ chỗ thành công cho sự kiện miễn phí này.</p>
             </div>
           </div>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={() => setCancelDialogOpen(true)}
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            Hủy đăng ký
+          </Button>
           <Button variant="outline" className="w-full" onClick={() => navigate('/events')}>
             Quay lại danh sách
           </Button>
@@ -249,6 +289,61 @@ export function EventDetailPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              Hủy đăng ký
+            </DialogTitle>
+            <DialogDescription>
+              Slot vé sẽ được hoàn trả cho sự kiện. Vui lòng nhập lý do hủy đăng ký.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-2 py-2">
+            <label htmlFor="cancel-reason" className="text-sm font-medium">
+              Lý do hủy
+            </label>
+            <Textarea
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              placeholder="Ví dụ: Tôi có lịch công tác đột xuất"
+              maxLength={500}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isCancelling}
+              onClick={() => setCancelDialogOpen(false)}
+            >
+              Quay lại
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isCancelling || !cancelReason.trim()}
+              onClick={async () => {
+                try {
+                  await cancelRegistration(cancelReason.trim());
+                  setCancelDialogOpen(false);
+                  setCancelReason('');
+                } catch {
+                  // Mutation đã hiển thị thông báo lỗi.
+                }
+              }}
+            >
+              {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Xác nhận hủy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,6 +2,9 @@ package com.example.registration_service.infrastructure.messaging.kafka.listener
 
 import com.example.registration_service.application.model.command.RegistrationCommand;
 import com.example.registration_service.application.port.in.HandleRegistrationCommand;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.inbound.AsyncReserveTicketCommandMessage;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.inbound.ConfirmPaidRegistrationMessage;
+import com.example.registration_service.infrastructure.messaging.kafka.dto.inbound.RollbackPaidRegistrationMessage;
 import com.example.registration_service.infrastructure.messaging.kafka.exception.KafkaMessageProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,8 +14,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -24,7 +25,7 @@ public class RegistrationCommandListener {
 
     @KafkaListener(topics = "Registration", groupId = "${spring.kafka.consumer.group-id}")
     public void onCommand(ConsumerRecord<String, String> record) {
-        String messageId = "";
+        String messageId = "unknown";
         try {
             Header typeHeader = record.headers().lastHeader("eventType");
             if (typeHeader == null) { log.warn("[CommandHandler] Thiếu header eventType. Bỏ qua."); return; }
@@ -38,71 +39,35 @@ public class RegistrationCommandListener {
             // Unwrap payload
             JsonNode rootNode = objectMapper.readTree(record.value());
             String actualPayload = rootNode.has("payload") ? rootNode.get("payload").asText() : record.value();
-            JsonNode payloadNode = objectMapper.readTree(actualPayload);
 
             log.info("[CommandHandler] Nhận lệnh: {} | messageId: {}", commandType, messageId);
 
             switch (commandType) {
                 case "ConfirmPaidRegistrationCommand" -> {
-                    UUID registrationId = UUID.fromString(
-                        payloadNode.get("registrationId").asText()
-                    );
+                    ConfirmPaidRegistrationMessage message =
+                        objectMapper.readValue(actualPayload, ConfirmPaidRegistrationMessage.class);
 
-                    handleRegistrationCommand.handle(
-                        new RegistrationCommand.ConfirmPaid(
-                            messageId,
-                            registrationId
-                        )
-                    );
+                    handleRegistrationCommand.handle(new RegistrationCommand.ConfirmPaid(messageId, message.getRegistrationId()));
                 }
-
                 case "RollbackPaidRegistrationCommand" -> {
-                    UUID registrationId = UUID.fromString(
-                        payloadNode.get("registrationId").asText()
-                    );
-                    String reason = payloadNode.get("reason").asText();
+                    RollbackPaidRegistrationMessage message =
+                        objectMapper.readValue(actualPayload, RollbackPaidRegistrationMessage.class);
 
                     handleRegistrationCommand.handle(
-                        new RegistrationCommand.RollbackPaid(
-                            messageId,
-                            registrationId,
-                            reason
-                        )
+                        new RegistrationCommand.RollbackPaid(messageId, message.getRegistrationId(), message.getReason())
                     );
                 }
-
                 case "AsyncReserveTicketCommand" -> {
-                    UUID campaignId = UUID.fromString(
-                        payloadNode.get("campaignId").asText()
-                    );
-                    UUID userId = UUID.fromString(
-                        payloadNode.get("userId").asText()
-                    );
+                    AsyncReserveTicketCommandMessage message =
+                        objectMapper.readValue(actualPayload, AsyncReserveTicketCommandMessage.class);
 
-                    String providerCode = null;
-                    JsonNode providerNode = payloadNode.get("provider");
-
-                    if (providerNode != null && !providerNode.isNull()) {
-                        providerCode = providerNode
-                            .path("code")
-                            .asText(null);
-                    }
+                    String providerCode = message.getProvider() == null ? null : message.getProvider().getCode();
 
                     handleRegistrationCommand.handle(
-                        new RegistrationCommand.ReserveTicketAsync(
-                            messageId,
-                            campaignId,
-                            userId,
-                            providerCode
-                        )
+                        new RegistrationCommand.ReserveTicketAsync(messageId, message.getCampaignId(), message.getUserId(), providerCode)
                     );
                 }
-
-                default ->
-                    log.debug(
-                        "Bỏ qua command không hỗ trợ: {}",
-                        commandType
-                    );
+                default -> log.debug("Bỏ qua command không hỗ trợ: {}", commandType);
             }
         } catch (Exception e) {
             log.error("Lỗi xử lý Kafka message {}", messageId, e);

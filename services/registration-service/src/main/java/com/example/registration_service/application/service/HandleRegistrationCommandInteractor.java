@@ -17,10 +17,8 @@ public final class HandleRegistrationCommandInteractor
     private final RegistrationCommandUseCase registrations;
     private final Clock clock;
 
-    public HandleRegistrationCommandInteractor(
-        ProcessedMessageStore processedMessages,
-        RegistrationCommandUseCase registrations,
-        Clock clock) {
+    public HandleRegistrationCommandInteractor(ProcessedMessageStore processedMessages,
+        RegistrationCommandUseCase registrations, Clock clock) {
         this.processedMessages = Objects.requireNonNull(processedMessages);
         this.registrations = Objects.requireNonNull(registrations);
         this.clock = Objects.requireNonNull(clock);
@@ -29,28 +27,16 @@ public final class HandleRegistrationCommandInteractor
     @Override
     public void handle(RegistrationCommand command) {
         Objects.requireNonNull(command, "command must not be null");
-
-        boolean firstDelivery = processedMessages.tryClaim(
-            command.messageId(),
-            clock.instant()
-        );
-
-        if (!firstDelivery) {
-            return;
-        }
+        boolean firstDelivery = processedMessages.tryClaim(command.messageId(), clock.instant());
+        if (!firstDelivery) return;
 
         switch (command) {
             case RegistrationCommand.ConfirmPaid confirm ->
-                registrations.confirmRegistration(
-                    confirm.registrationId()
-                );
+                registrations.confirmRegistration(confirm.registrationId());
 
             case RegistrationCommand.RollbackPaid rollback ->
                 registrations.cancelRegistration(
-                    new CancelRegistrationCommand(
-                        rollback.registrationId(),
-                        rollback.reason()
-                    )
+                    new CancelRegistrationCommand(rollback.registrationId(), rollback.reason())
                 );
 
             case RegistrationCommand.ReserveTicketAsync reserve ->

@@ -15,10 +15,8 @@ public final class HandlePaymentResultInteractor
     private final SagaCommandPort sagaCommands;
     private final Clock clock;
 
-    public HandlePaymentResultInteractor(
-        ProcessedMessageStore processedMessages,
-        SagaCommandPort sagaCommands,
-        Clock clock) {
+    public HandlePaymentResultInteractor(ProcessedMessageStore processedMessages,
+        SagaCommandPort sagaCommands, Clock clock) {
         this.processedMessages = Objects.requireNonNull(processedMessages);
         this.sagaCommands = Objects.requireNonNull(sagaCommands);
         this.clock = Objects.requireNonNull(clock);
@@ -27,23 +25,15 @@ public final class HandlePaymentResultInteractor
     @Override
     public void handle(PaymentResultCommand command) {
         Objects.requireNonNull(command, "command must not be null");
-
         boolean firstDelivery = processedMessages.tryClaim(command.messageId(), clock.instant());
-
         if (!firstDelivery) return;
 
         switch (command) {
             case PaymentResultCommand.Succeeded succeeded ->
-                sagaCommands.sendConfirmCommand(
-                    succeeded.registrationId(),
-                    succeeded.paymentId()
-                );
+                sagaCommands.sendConfirmCommand(succeeded.registrationId(), succeeded.paymentId());
 
             case PaymentResultCommand.Failed failed ->
-                sagaCommands.sendRollbackCommand(
-                    failed.registrationId(),
-                    failed.reason()
-                );
+                sagaCommands.sendRollbackCommand(failed.registrationId(), failed.reason());
         }
     }
 }

@@ -11,18 +11,11 @@ import java.util.UUID;
 @Component
 public class RegistrationApiMapper {
 
-    public ReserveTicketCommand toAppCommand(
-        ReserveTicketRequest request,
-        UUID userId) {
-        return new ReserveTicketCommand(
-            request.getCampaignId(),
-            userId,
-            request.getProvider()
-        );
+    public ReserveTicketCommand toAppCommand(ReserveTicketRequest request, UUID userId) {
+        return new ReserveTicketCommand(request.getCampaignId(), userId, request.getProvider());
     }
 
-    public RegistrationResponse toResponse(
-        RegistrationResult result) {
+    public RegistrationResponse toResponse(RegistrationResult result) {
         return new RegistrationResponse(
             result.registrationId(),
             result.campaignId(),

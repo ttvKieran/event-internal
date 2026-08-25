@@ -6,18 +6,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Objects;
 
-public final class TransactionalHandlePaymentResult
-    implements HandlePaymentResult {
+public final class TransactionalHandlePaymentResult implements HandlePaymentResult {
 
     private final HandlePaymentResult delegate;
     private final TransactionTemplate transactionTemplate;
 
     public TransactionalHandlePaymentResult(
-        HandlePaymentResult delegate,
-        TransactionTemplate transactionTemplate) {
+        HandlePaymentResult delegate, TransactionTemplate transactionTemplate) {
         this.delegate = Objects.requireNonNull(delegate);
-        this.transactionTemplate =
-            Objects.requireNonNull(transactionTemplate);
+        this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
     }
 
     @Override

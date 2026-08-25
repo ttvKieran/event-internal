@@ -10,5 +10,4 @@ public record RegistrationResult(
     String status,
     String cancelReason,
     LocalDateTime registeredAt
-) {
-}
+) { }

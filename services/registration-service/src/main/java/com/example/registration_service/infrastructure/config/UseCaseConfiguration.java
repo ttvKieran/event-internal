@@ -27,121 +27,75 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    RegistrationIdGenerator registrationIdGenerator() {
-        return UUID::randomUUID;
+    RegistrationIdGenerator registrationIdGenerator(){
+        return new RegistrationIdGenerator() {
+            @Override
+            public UUID nextId() {
+                return UUID.randomUUID();
+            }
+        };
     }
 
     @Bean
     HandlePaymentResult handlePaymentResult(
-        ProcessedMessageStore processedMessages,
-        SagaCommandPort sagaCommands,
-        Clock clock,
-        TransactionTemplate applicationTransactionTemplate) {
+        ProcessedMessageStore processedMessages, SagaCommandPort sagaCommands,
+        Clock clock, TransactionTemplate applicationTransactionTemplate) {
 
         HandlePaymentResult interactor =
-            new HandlePaymentResultInteractor(
-                processedMessages,
-                sagaCommands,
-                clock
-            );
+            new HandlePaymentResultInteractor(processedMessages, sagaCommands, clock);
 
-        return new TransactionalHandlePaymentResult(
-            interactor,
-            applicationTransactionTemplate
-        );
+        return new TransactionalHandlePaymentResult(interactor, applicationTransactionTemplate);
     }
 
     @Bean
     HandleEventLifecycle handleEventLifecycle(
-        ProcessedMessageStore processedMessages,
-        RegistrationCampaignUseCase campaigns,
-        Clock clock,
-        TransactionTemplate applicationTransactionTemplate) {
+        ProcessedMessageStore processedMessages, RegistrationCampaignUseCase campaigns,
+        Clock clock, TransactionTemplate applicationTransactionTemplate) {
 
         HandleEventLifecycle interactor =
-            new HandleEventLifecycleInteractor(
-                processedMessages,
-                campaigns,
-                clock
-            );
+            new HandleEventLifecycleInteractor(processedMessages, campaigns, clock);
 
-        return new TransactionalHandleEventLifecycle(
-            interactor,
-            applicationTransactionTemplate
-        );
+        return new TransactionalHandleEventLifecycle(interactor, applicationTransactionTemplate);
     }
 
     @Bean
     HandleRegistrationCommand handleRegistrationCommand(
-        ProcessedMessageStore processedMessages,
-        RegistrationCommandUseCase registrations,
-        Clock clock,
-        TransactionTemplate applicationTransactionTemplate) {
+        ProcessedMessageStore processedMessages, RegistrationCommandUseCase registrations,
+        Clock clock, TransactionTemplate applicationTransactionTemplate) {
 
         HandleRegistrationCommand interactor =
-            new HandleRegistrationCommandInteractor(
-                processedMessages,
-                registrations,
-                clock
-            );
+            new HandleRegistrationCommandInteractor(processedMessages, registrations, clock);
 
-        return new TransactionalHandleRegistrationCommand(
-            interactor,
-            applicationTransactionTemplate
-        );
+        return new TransactionalHandleRegistrationCommand(interactor, applicationTransactionTemplate);
     }
 
     @Bean
-    TransactionTemplate applicationTransactionTemplate(
-        PlatformTransactionManager transactionManager) {
+    TransactionTemplate applicationTransactionTemplate(PlatformTransactionManager transactionManager) {
         return new TransactionTemplate(transactionManager);
     }
 
     @Bean
     TransactionalRegistrationCampaignUseCase registrationCampaignUseCases(
-        RegistrationCampaignRepository campaignRepository,
-        TicketCachePort ticketCache,
-        Clock clock,
-        TransactionTemplate applicationTransactionTemplate) {
+        RegistrationCampaignRepository campaignRepository, TicketCachePort ticketCache,
+        Clock clock, TransactionTemplate applicationTransactionTemplate) {
 
         RegistrationCampaignServiceImpl interactor =
-            new RegistrationCampaignServiceImpl(
-                campaignRepository,
-                ticketCache,
-                clock
-            );
+            new RegistrationCampaignServiceImpl(campaignRepository, ticketCache, clock);
 
-        return new TransactionalRegistrationCampaignUseCase(
-            interactor,
-            interactor,
-            applicationTransactionTemplate
-        );
+        return new TransactionalRegistrationCampaignUseCase(interactor, interactor, applicationTransactionTemplate);
     }
 
     @Bean
     TransactionalRegistrationUseCase registrationUseCases(
-        RegistrationCampaignRepository campaignRepository,
-        RegistrationRepository registrationRepository,
-        RegistrationMessagePort messagePort,
-        TicketCachePort ticketCache,
-        RegistrationIdGenerator idGenerator,
-        Clock clock,
-        TransactionTemplate applicationTransactionTemplate) {
+        RegistrationCampaignRepository campaignRepository, RegistrationRepository registrationRepository,
+        RegistrationMessagePort messagePort, TicketCachePort ticketCache,
+        RegistrationIdGenerator idGenerator, Clock clock, TransactionTemplate applicationTransactionTemplate) {
 
         RegistrationServiceImpl interactor =
-            new RegistrationServiceImpl(
-                campaignRepository,
-                registrationRepository,
-                messagePort,
-                ticketCache,
-                idGenerator,
-                clock
-            );
+            new RegistrationServiceImpl(campaignRepository,
+                registrationRepository, messagePort, ticketCache,
+                idGenerator, clock);
 
-        return new TransactionalRegistrationUseCase(
-            interactor,
-            interactor,
-            applicationTransactionTemplate
-        );
+        return new TransactionalRegistrationUseCase(interactor, interactor, applicationTransactionTemplate);
     }
 }

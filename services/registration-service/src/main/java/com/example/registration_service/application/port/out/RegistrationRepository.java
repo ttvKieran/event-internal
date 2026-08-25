@@ -19,4 +19,6 @@ public interface RegistrationRepository {
     );
 
     int countActiveRegistrations(UUID campaignId);
+
+    Optional<Registration> findByIdForUpdate(UUID registrationId);
 }

@@ -8,5 +8,4 @@ public record CampaignStatusResult(
     String status,
     LocalDateTime openedAt,
     LocalDateTime closedAt
-) {
-}
+) { }

@@ -45,9 +45,7 @@ public class SagaCommandAdapter implements SagaCommandPort {
             String json = objectMapper.writeValueAsString(payload);
             OutboxEventEntity outbox = OutboxEventEntity.of(
                 "Registration",
-                registrationId.toString(),
-                commandType,
-                json
+                registrationId.toString(), commandType, json
             );
             outboxRepository.save(outbox);
         } catch (JsonProcessingException e) {

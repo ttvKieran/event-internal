@@ -44,8 +44,7 @@ public class RegistrationController {
         @RequestHeader("X-Employee-Id") UUID userId,
         @Valid @RequestBody ReserveTicketRequest request) {
         ReserveTicketCommand command = mapper.toAppCommand(
-            request,
-            userId
+            request, userId
         );
 
         registrationCommands.reserveTicketAsync(command);
@@ -74,11 +73,7 @@ public class RegistrationController {
             @RequestParam(required = false) UUID eventId,
             @RequestParam(required = false) UUID employeeId,
             @RequestParam(required = false) String status) {
-        RegistrationFilter filter = new RegistrationFilter(
-            eventId,
-            employeeId,
-            status
-        );
+        RegistrationFilter filter = new RegistrationFilter(eventId, employeeId, status);
 
         List<RegistrationResponse> responses = registrationQueries
             .getRegistrations(filter)
@@ -95,8 +90,7 @@ public class RegistrationController {
     @GetMapping("/{registrationId}")
     public ResponseEntity<ApiResponse<RegistrationResponse>>
         getRegistration(@PathVariable UUID registrationId) {
-        RegistrationResult result = registrationQueries
-            .getRegistrationById(registrationId);
+        RegistrationResult result = registrationQueries.getRegistrationById(registrationId);
 
         return ResponseEntity.ok(ApiResponse.ok(
             mapper.toResponse(result),
@@ -111,8 +105,7 @@ public class RegistrationController {
             @Valid @RequestBody CancelRegistrationRequest request) {
         RegistrationResult result = registrationCommands
             .cancelRegistration(new CancelRegistrationCommand(
-                registrationId,
-                request.getReason()
+                registrationId, request.getReason()
             ));
 
         return ResponseEntity.ok(ApiResponse.ok(
@@ -124,10 +117,7 @@ public class RegistrationController {
     @GetMapping("/campaigns/{campaignId}/stats")
     public ResponseEntity<CampaignStatsResponse> getCampaignStats(
         @PathVariable UUID campaignId) {
-        int activeTickets = registrationQueries
-            .countActiveRegistrations(campaignId);
-        return ResponseEntity.ok(
-            new CampaignStatsResponse(activeTickets)
-        );
+        int activeTickets = registrationQueries.countActiveRegistrations(campaignId);
+        return ResponseEntity.ok(new CampaignStatsResponse(activeTickets));
     }
 }

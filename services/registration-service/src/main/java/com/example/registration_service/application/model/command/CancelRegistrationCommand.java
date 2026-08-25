@@ -8,17 +8,10 @@ public record CancelRegistrationCommand(
     String reason
 ) {
     public CancelRegistrationCommand {
-        Objects.requireNonNull(
-            registrationId,
-            "registrationId không được null"
-        );
-
+        Objects.requireNonNull(registrationId, "registrationId không được null");
         if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException(
-                "Lý do hủy không được để trống"
-            );
+            throw new IllegalArgumentException("Lý do hủy không được để trống");
         }
-
         reason = reason.trim();
     }
 }

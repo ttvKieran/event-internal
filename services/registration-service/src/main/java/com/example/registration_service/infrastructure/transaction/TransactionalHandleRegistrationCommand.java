@@ -6,18 +6,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Objects;
 
-public final class TransactionalHandleRegistrationCommand
-    implements HandleRegistrationCommand {
+public final class TransactionalHandleRegistrationCommand implements HandleRegistrationCommand {
 
     private final HandleRegistrationCommand delegate;
     private final TransactionTemplate transactionTemplate;
 
     public TransactionalHandleRegistrationCommand(
-        HandleRegistrationCommand delegate,
-        TransactionTemplate transactionTemplate) {
+        HandleRegistrationCommand delegate, TransactionTemplate transactionTemplate) {
         this.delegate = Objects.requireNonNull(delegate);
-        this.transactionTemplate =
-            Objects.requireNonNull(transactionTemplate);
+        this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
     }
 
     @Override

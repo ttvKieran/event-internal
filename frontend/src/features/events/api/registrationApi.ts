@@ -20,6 +20,23 @@ export interface RegistrationStatusResponse {
   data: string; // e.g. "SUCCESS:uuid" or "PENDING" or "FAILED:reason"
 }
 
+export interface RegistrationResponse {
+  registrationId: string;
+  eventId: string;
+  employeeId: string;
+  status: 'RESERVED' | 'CONFIRMED' | 'CANCELLED';
+  cancelReason?: string | null;
+  registeredAt: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  code: string;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
 export const registrationApi = {
   // Gửi lệnh đăng ký vé (Bất đồng bộ)
   registerForEvent: async (campaignId: string, provider: string = 'vnpay'): Promise<AsyncOperationApiResponse> => {
@@ -33,10 +50,22 @@ export const registrationApi = {
     });
   },
 
-  // Lấy danh sách đơn đăng ký của nhân viên
-  getUserRegistrations: async (employeeId: string): Promise<any> => {
+  // Lấy đăng ký của nhân viên, có thể giới hạn trong một sự kiện.
+  getUserRegistrations: async (
+    employeeId: string,
+    eventId?: string,
+  ): Promise<ApiResponse<RegistrationResponse[]>> => {
     return axiosClient.get('/registrations', {
-      params: { employeeId },
+      params: { employeeId, eventId },
+    });
+  },
+
+  cancelRegistration: async (
+    registrationId: string,
+    reason: string,
+  ): Promise<ApiResponse<RegistrationResponse>> => {
+    return axiosClient.post(`/registrations/${registrationId}/cancel`, {
+      reason,
     });
   },
 };

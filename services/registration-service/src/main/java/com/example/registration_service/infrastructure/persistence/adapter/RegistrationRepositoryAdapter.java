@@ -22,8 +22,7 @@ public class RegistrationRepositoryAdapter implements RegistrationRepository {
 
     @Override
     public Optional<Registration> findById(UUID registrationId) {
-        return jpaRepository.findById(registrationId)
-            .map(mapper::toDomain);
+        return jpaRepository.findById(registrationId).map(mapper::toDomain);
     }
 
     @Override
@@ -50,5 +49,10 @@ public class RegistrationRepositoryAdapter implements RegistrationRepository {
         );
         long count = jpaRepository.countByCampaignIdAndStatusIn(campaignId, activeStatuses);
         return (int) count;
+    }
+
+    @Override
+    public Optional<Registration> findByIdForUpdate(UUID registrationId) {
+        return jpaRepository.findByIdForUpdate(registrationId).map(mapper::toDomain);
     }
 }

@@ -6,6 +6,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -22,7 +23,7 @@ public class RegistrationCampaignEntity extends BaseEntity {
     private Integer maxParticipants;
     private Integer currentParticipants;
     @jakarta.persistence.Column(precision = 15, scale = 2)
-    private java.math.BigDecimal price;
+    private BigDecimal price;
 
     private LocalDateTime openAt;
     private LocalDateTime closeAt;

@@ -399,6 +399,12 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_PORT:-2181}
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "cub", "zk-ready", "localhost:2181", "10"]
+      interval: 10s
+      timeout: 15s
+      retries: 5
+      start_period: 10s
     networks:
       - app-network
 
@@ -414,11 +420,14 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    restart: "on-failure:5"
+    stop_grace_period: 30s
     healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       start_period: 30s
     networks:

@@ -6,18 +6,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Objects;
 
-public final class TransactionalHandleEventLifecycle
-    implements HandleEventLifecycle {
+public final class TransactionalHandleEventLifecycle implements HandleEventLifecycle {
 
     private final HandleEventLifecycle delegate;
     private final TransactionTemplate transactionTemplate;
 
-    public TransactionalHandleEventLifecycle(
-        HandleEventLifecycle delegate,
-        TransactionTemplate transactionTemplate) {
+    public TransactionalHandleEventLifecycle(HandleEventLifecycle delegate, TransactionTemplate transactionTemplate) {
         this.delegate = Objects.requireNonNull(delegate);
-        this.transactionTemplate =
-            Objects.requireNonNull(transactionTemplate);
+        this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
     }
 
     @Override

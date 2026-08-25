@@ -28,11 +28,8 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
     @Override
     public void publishRegistrationRequested(Registration reg, java.math.BigDecimal amount, String provider) {
         RegistrationRequestedEventPayload payload = new RegistrationRequestedEventPayload(
-            reg.getRegistrationId(),
-            reg.getCampaignId(),
-            reg.getUserId(),
-            amount,
-            provider,
+            reg.getRegistrationId(), reg.getCampaignId(),
+            reg.getUserId(), amount, provider,
             reg.getRegisteredAt().toString()
         );
         insertOutbox(reg, "RegistrationRequestedEvent", payload);
@@ -41,10 +38,8 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
     @Override
     public void publishRegistrationConfirmed(Registration reg) {
         RegistrationConfirmedEventPayload payload = new RegistrationConfirmedEventPayload(
-            reg.getRegistrationId(),
-            reg.getCampaignId(),
-            reg.getUserId(),
-            reg.getRegisteredAt().toString()
+            reg.getRegistrationId(), reg.getCampaignId(),
+            reg.getUserId(), reg.getRegisteredAt().toString()
         );
         insertOutbox(reg, "RegistrationConfirmedEvent", payload);
     }
@@ -52,10 +47,8 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
     @Override
     public void publishPaidRegistrationRolledBack(Registration reg, String reason) {
         PaidRegistrationRolledBackEventPayload payload = new PaidRegistrationRolledBackEventPayload(
-            reg.getRegistrationId(),
-            reg.getCampaignId(),
-            reason,
-            LocalDateTime.now().toString()
+            reg.getRegistrationId(), reg.getCampaignId(),
+            reason, LocalDateTime.now().toString()
         );
         insertOutbox(reg, "PaidRegistrationRolledBackEvent", payload);
     }
@@ -63,18 +56,11 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
     @Override
     public void publishAsyncReserveTicketCommand(ReserveTicketCommand command) {
         AsyncReserveTicketCommandPayload.ProviderPayload provider =
-            command.providerCode() == null
-                ? null
-                : new AsyncReserveTicketCommandPayload.ProviderPayload(
+            command.providerCode() == null ? null : new AsyncReserveTicketCommandPayload.ProviderPayload(
                     command.providerCode()
                 );
-
         AsyncReserveTicketCommandPayload payload =
-            new AsyncReserveTicketCommandPayload(
-                command.campaignId(),
-                command.userId(),
-                provider
-            );
+            new AsyncReserveTicketCommandPayload(command.campaignId(), command.userId(), provider);
 
         try {
             String json = objectMapper.writeValueAsString(payload);
@@ -98,8 +84,7 @@ public class RegistrationMessageAdapter implements RegistrationMessagePort {
             OutboxEventEntity outbox = OutboxEventEntity.of(
                 "Registration",
                 reg.getRegistrationId().toString(),
-                eventType,
-                json
+                eventType, json
             );
             outboxRepository.save(outbox);
             log.info("[Outbox] Đã lưu sự kiện {}", eventType);

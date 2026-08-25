@@ -2,8 +2,10 @@ package com.example.registration_service.presentation.exception;
 
 import com.example.registration_service.presentation.dto.response.ApiResponse;
 import com.example.registration_service.presentation.dto.response.ErrorResponseDTO;
+import jakarta.persistence.PessimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,8 +44,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-        org.springframework.dao.CannotAcquireLockException.class,
-        jakarta.persistence.PessimisticLockException.class
+        CannotAcquireLockException.class, PessimisticLockException.class
     })
     public ResponseEntity<ErrorResponseDTO> handleLockTimeout(Exception ex, HttpServletRequest request) {
         log.warn("Database Lock Timeout - Path: {}, Message: {}", request.getRequestURI(), ex.getMessage());

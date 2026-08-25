@@ -23,54 +23,33 @@ public final class RegistrationCampaignServiceImpl
     private final TicketCachePort ticketCache;
     private final Clock clock;
 
-    public RegistrationCampaignServiceImpl(
-        RegistrationCampaignRepository campaignRepository,
-        TicketCachePort ticketCache,
-        Clock clock) {
-        this.campaignRepository =
-            Objects.requireNonNull(campaignRepository);
+    public RegistrationCampaignServiceImpl(RegistrationCampaignRepository campaignRepository,
+        TicketCachePort ticketCache, Clock clock) {
+        this.campaignRepository = Objects.requireNonNull(campaignRepository);
         this.ticketCache = Objects.requireNonNull(ticketCache);
         this.clock = Objects.requireNonNull(clock);
     }
 
     @Override
-    public void createCampaignSnapshot(
-        UUID campaignId,
-        String ticketTypeCode,
-        Integer maxParticipants,
-        BigDecimal price,
-        LocalDateTime openAt,
-        LocalDateTime closeAt) {
+    public void createCampaignSnapshot(UUID campaignId, String ticketTypeCode,
+        Integer maxParticipants, BigDecimal price, LocalDateTime openAt, LocalDateTime closeAt) {
 
         RegistrationTimeWindow timeWindow =
             RegistrationTimeWindow.of(openAt, closeAt);
 
         RegistrationCampaign campaign =
-            RegistrationCampaign.createSnapshot(
-                campaignId,
-                TicketType.of(ticketTypeCode),
-                maxParticipants,
-                price,
-                timeWindow
-            );
+            RegistrationCampaign.createSnapshot(campaignId, TicketType.of(ticketTypeCode),
+                maxParticipants, price, timeWindow);
 
-        ticketCache.initializeTicketCache(
-            campaignId,
-            maxParticipants
-        );
+        ticketCache.initializeTicketCache(campaignId, maxParticipants);
 
         campaignRepository.save(campaign);
     }
 
     @Override
     public void activateCampaign(UUID campaignId) {
-        RegistrationCampaign campaign =
-            campaignRepository.findById(campaignId)
-                .orElseThrow(() ->
-                    new IllegalArgumentException(
-                        "Không tìm thấy Chiến dịch bán vé"
-                    )
-                );
+        RegistrationCampaign campaign = campaignRepository.findById(campaignId).
+            orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
 
         campaign.changeStatus(CampaignStatus.ACTIVE);
         campaignRepository.save(campaign);
@@ -78,13 +57,8 @@ public final class RegistrationCampaignServiceImpl
 
     @Override
     public void cancelCampaign(UUID campaignId) {
-        RegistrationCampaign campaign =
-            campaignRepository.findById(campaignId)
-                .orElseThrow(() ->
-                    new IllegalArgumentException(
-                        "Không tìm thấy Chiến dịch bán vé"
-                    )
-                );
+        RegistrationCampaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
 
         campaign.changeStatus(CampaignStatus.CANCELLED);
         campaignRepository.save(campaign);
@@ -98,12 +72,8 @@ public final class RegistrationCampaignServiceImpl
         campaign.openManually(openedAt);
         campaignRepository.save(campaign);
 
-        return new CampaignStatusResult(
-            campaignId,
-            campaign.getStatus().getCode(),
-            openedAt,
-            null
-        );
+        return new CampaignStatusResult(campaignId, campaign.getStatus().getCode(),
+            openedAt, null);
     }
 
     @Override
@@ -114,18 +84,12 @@ public final class RegistrationCampaignServiceImpl
         campaign.closeManually(closedAt);
         campaignRepository.save(campaign);
 
-        return new CampaignStatusResult(
-            campaignId,
-            campaign.getStatus().getCode(),
-            null,
-            closedAt
-        );
+        return new CampaignStatusResult(campaignId, campaign.getStatus().getCode(),
+            null, closedAt);
     }
 
     private RegistrationCampaign getCampaign(UUID campaignId) {
         return campaignRepository.findById(campaignId)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "Không tìm thấy Chiến dịch bán vé"
-            ));
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Chiến dịch bán vé"));
     }
 }

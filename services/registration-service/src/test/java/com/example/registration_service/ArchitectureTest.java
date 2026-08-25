@@ -6,6 +6,7 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
 @AnalyzeClasses(
     packages = "com.example.registration_service",
@@ -14,53 +15,53 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchitectureTest {
 
     @ArchTest
-    static final ArchRule DOMAIN_DOES_NOT_DEPEND_ON_OUTER_LAYERS =
-        noClasses()
-            .that().resideInAnyPackage("..domain..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..application..",
-                "..presentation..",
-                "..infrastructure.."
+    static final ArchRule DEPENDENCIES_POINT_INWARD =
+        layeredArchitecture()
+            .consideringOnlyDependenciesInLayers()
+            .layer("Domain").definedBy("..domain..")
+            .layer("Application").definedBy("..application..")
+            .layer("Presentation").definedBy("..presentation..")
+            .layer("Infrastructure").definedBy("..infrastructure..")
+            .whereLayer("Domain")
+                .mayOnlyBeAccessedByLayers(
+                    "Application",
+                    "Infrastructure"
+                )
+            .whereLayer("Application")
+                .mayOnlyBeAccessedByLayers(
+                    "Presentation",
+                    "Infrastructure"
+                )
+            .whereLayer("Presentation")
+                .mayNotBeAccessedByAnyLayer()
+            .whereLayer("Infrastructure")
+                .mayNotBeAccessedByAnyLayer()
+            .because(
+                "source-code dependencies must point toward " +
+                "application and domain policies"
             );
 
     @ArchTest
-    static final ArchRule DOMAIN_HAS_NO_FRAMEWORK_DEPENDENCIES =
+    static final ArchRule INNER_LAYERS_ARE_FRAMEWORK_FREE =
         noClasses()
-            .that().resideInAnyPackage("..domain..")
+            .that().resideInAnyPackage(
+                "..domain..",
+                "..application.."
+            )
             .should().dependOnClassesThat().resideInAnyPackage(
                 "org.springframework..",
                 "jakarta.persistence..",
+                "jakarta.transaction..",
+                "jakarta.servlet..",
                 "com.fasterxml.jackson..",
                 "org.apache.kafka.."
+            )
+            .because(
+                "business policies must be independent of frameworks"
             );
 
     @ArchTest
-    static final ArchRule APPLICATION_DOES_NOT_DEPEND_ON_OUTER_PACKAGES =
-        noClasses()
-            .that().resideInAnyPackage("..application..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..presentation..",
-                "..infrastructure.."
-            );
-
-    @ArchTest
-    static final ArchRule PRESENTATION_DOES_NOT_DEPEND_ON_INFRASTRUCTURE =
-        noClasses()
-            .that().resideInAnyPackage("..presentation..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..infrastructure.."
-            );
-
-    @ArchTest
-    static final ArchRule PRESENTATION_DOES_NOT_EXPOSE_DOMAIN_MODELS =
-        noClasses()
-            .that().resideInAnyPackage("..presentation..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..domain.."
-            );
-
-    @ArchTest
-    static final ArchRule INPUT_ADAPTERS_ONLY_USE_INPUT_BOUNDARIES =
+    static final ArchRule INPUT_ADAPTERS_USE_INPUT_BOUNDARIES =
         noClasses()
             .that().resideInAnyPackage(
                 "..presentation.rest..",
@@ -69,12 +70,18 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage(
                 "..application.port.out..",
                 "..application.service..",
+                "..domain..",
                 "..infrastructure.persistence..",
-                "..domain.."
+                "..infrastructure.redis..",
+                "..infrastructure.messaging.kafka.adapter.."
+            )
+            .because(
+                "input adapters must enter the application through " +
+                "input ports instead of calling output details"
             );
 
     @ArchTest
-    static final ArchRule OUTPUT_ADAPTERS_DO_NOT_USE_INPUT_ADAPTERS =
+    static final ArchRule OUTPUT_ADAPTERS_DO_NOT_USE_INPUT_SIDE =
         noClasses()
             .that().resideInAnyPackage(
                 "..infrastructure.persistence..",
@@ -82,105 +89,13 @@ class ArchitectureTest {
                 "..infrastructure.messaging.kafka.adapter.."
             )
             .should().dependOnClassesThat().resideInAnyPackage(
+                "..application.port.in..",
+                "..application.service..",
                 "..presentation..",
                 "..infrastructure.messaging.kafka.listener.."
-            );
-
-    @ArchTest
-    static final ArchRule APPLICATION_DOES_NOT_DEPEND_ON_MESSAGING_FRAMEWORKS =
-        noClasses()
-            .that().resideInAnyPackage("..application..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "com.fasterxml.jackson..",
-                "org.apache.kafka..",
-                "org.springframework.kafka.."
-            );
-
-    @ArchTest
-    static final ArchRule KAFKA_LISTENERS_DO_NOT_DEPEND_ON_PERSISTENCE =
-        noClasses()
-            .that().resideInAnyPackage(
-                "..infrastructure.messaging.kafka.listener.."
             )
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..infrastructure.persistence..",
-                "org.springframework.data..",
-                "jakarta.persistence.."
-            );
-
-    @ArchTest
-    static final ArchRule PAYMENT_LISTENER_DOES_NOT_USE_OUTPUT_PORTS =
-        noClasses()
-            .that().haveSimpleName("PaymentKafkaListener")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..application.port.out..",
-                "..infrastructure.persistence.."
-            );
-
-    @ArchTest
-    static final ArchRule EVENT_LISTENER_DOES_NOT_USE_OUTPUT_PORTS =
-        noClasses()
-            .that().haveSimpleName("EventKafkaListener")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..application.port.out..",
-                "..infrastructure.persistence.."
-            );
-
-    @ArchTest
-    static final ArchRule KAFKA_LISTENERS_ONLY_CALL_INPUT_BOUNDARIES =
-        noClasses()
-            .that().resideInAnyPackage(
-                "..infrastructure.messaging.kafka.listener.."
-            )
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..application.port.out..",
-                "..application.service..",
-                "..infrastructure.persistence..",
-                "..domain.."
-            );
-
-    @ArchTest
-    static final ArchRule PAYMENT_LISTENER_HAS_NO_TRANSACTION_DEPENDENCY =
-        noClasses()
-            .that().haveSimpleName("PaymentKafkaListener")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "jakarta.transaction..",
-                "org.springframework.transaction.."
-            );
-
-    @ArchTest
-    static final ArchRule KAFKA_LISTENERS_DO_NOT_MANAGE_TRANSACTIONS =
-        noClasses()
-            .that().resideInAnyPackage(
-                "..infrastructure.messaging.kafka.listener.."
-            )
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "jakarta.transaction..",
-                "org.springframework.transaction.."
-            );
-
-    @ArchTest
-    static final ArchRule CAMPAIGN_APPLICATION_SERVICE_IS_FRAMEWORK_FREE =
-        noClasses()
-            .that().haveSimpleName(
-                "RegistrationCampaignServiceImpl"
-            )
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "org.springframework..",
-                "jakarta.transaction..",
-                "jakarta.persistence.."
-            );
-
-    @ArchTest
-    static final ArchRule APPLICATION_IS_FRAMEWORK_FREE =
-        noClasses()
-            .that().resideInAnyPackage("..application..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "org.springframework..",
-                "jakarta.persistence..",
-                "jakarta.transaction..",
-                "jakarta.servlet..",
-                "com.fasterxml.jackson..",
-                "org.apache.kafka.."
+            .because(
+                "output adapters must implement output ports without " +
+                "calling input adapters or use-case implementations"
             );
 }

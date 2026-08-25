@@ -25,7 +25,7 @@ public class EventKafkaListener {
 
     @KafkaListener(topics = "Event", groupId = "${spring.kafka.consumer.group-id}")
     public void listenDebeziumOutbox(ConsumerRecord<String, String> record) {
-        String messageId = "";
+        String messageId = "unknown";
         try {
             Header typeHeader = record.headers().lastHeader("eventType");
             if (typeHeader == null) {
@@ -45,71 +45,35 @@ public class EventKafkaListener {
             String rawValue = record.value();
             JsonNode rootNode = objectMapper.readTree(rawValue);
 
-            String actualPayloadStr = rootNode.has("payload")
-                ? rootNode.get("payload").asText()
-                : rawValue;
+            String actualPayloadStr = rootNode.has("payload") ? rootNode.get("payload").asText() : rawValue;
 
             log.info("Nhận sự kiện Kafka - Topic: 'Event', Loại: {}", eventType);
 
             // Phân luồng xử lý theo Loại sự kiện
             switch (eventType) {
                 case "EventDetailsConfiguredEvent" -> {
-                    EventDetailsConfiguredMessage message =
-                        objectMapper.readValue(
-                            actualPayloadStr,
-                            EventDetailsConfiguredMessage.class
-                        );
-
+                    EventDetailsConfiguredMessage message = objectMapper.readValue(actualPayloadStr, EventDetailsConfiguredMessage.class);
                     handleEventLifecycle.handle(
                         new EventLifecycleCommand.ConfigureCampaign(
-                            messageId,
-                            message.getEventId(),
-                            message.getTicketType(),
-                            message.getMaxParticipants(),
-                            message.getPrice(),
-                            message.getRegistrationOpenAt(),
+                            messageId, message.getEventId(),
+                            message.getTicketType(), message.getMaxParticipants(),
+                            message.getPrice(), message.getRegistrationOpenAt(),
                             message.getRegistrationCloseAt()
                         )
                     );
                 }
-
                 case "EventPublishedEvent" -> {
                     EventPublishedMessage message =
-                        objectMapper.readValue(
-                            actualPayloadStr,
-                            EventPublishedMessage.class
-                        );
-
-                    handleEventLifecycle.handle(
-                        new EventLifecycleCommand.ActivateCampaign(
-                            messageId,
-                            message.getEventId()
-                        )
-                    );
+                        objectMapper.readValue(actualPayloadStr, EventPublishedMessage.class);
+                    handleEventLifecycle.handle(new EventLifecycleCommand.ActivateCampaign(messageId, message.getEventId()));
                 }
-
                 case "EventCancelledEvent" -> {
                     EventCancelledMessage message =
-                        objectMapper.readValue(
-                            actualPayloadStr,
-                            EventCancelledMessage.class
-                        );
-
-                    handleEventLifecycle.handle(
-                        new EventLifecycleCommand.CancelCampaign(
-                            messageId,
-                            message.getEventId()
-                        )
-                    );
+                        objectMapper.readValue(actualPayloadStr, EventCancelledMessage.class);
+                    handleEventLifecycle.handle(new EventLifecycleCommand.CancelCampaign(messageId, message.getEventId()));
                 }
-
-                default ->
-                    log.debug(
-                        "Bỏ qua event không hỗ trợ: {}",
-                        eventType
-                    );
+                default -> log.debug("Bỏ qua event không hỗ trợ: {}", eventType);
             }
-
         } catch (Exception e) {
             log.error("Lỗi xử lý Kafka message {}", messageId, e);
             throw new KafkaMessageProcessingException(messageId, e);

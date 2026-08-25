@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { registrationApi } from './registrationApi';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -8,6 +8,7 @@ type RegistrationState = 'IDLE' | 'SUBMITTING' | 'POLLING' | 'SUCCESS' | 'FAILED
 
 export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' | 'PAID' = 'FREE') => {
   const { employee } = useAuthStore();
+  const queryClient = useQueryClient();
   const [regState, setRegState] = useState<RegistrationState>('IDLE');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [registrationId, setRegistrationId] = useState<string>('');
@@ -35,13 +36,24 @@ export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' 
     },
   });
 
-  const currentUserId = employee?.id || employee?.employeeId || '999e4567-e89b-12d3-a456-426614174999';
+  const currentUserId = employee?.id || employee?.employeeId;
+
+  const registrationsQuery = useQuery({
+    queryKey: ['registrations', campaignId, currentUserId],
+    queryFn: () => registrationApi.getUserRegistrations(currentUserId!, campaignId),
+    enabled: !!campaignId && !!currentUserId,
+  });
+
+  const activeRegistration = registrationsQuery.data?.data.find(
+    (registration) =>
+      registration.status === 'RESERVED' || registration.status === 'CONFIRMED',
+  );
 
   // 2. Query Polling (Chỉ chạy khi regState === 'POLLING')
   useQuery({
     queryKey: ['registrationStatus', campaignId, currentUserId],
     queryFn: async () => {
-      const res = await registrationApi.checkRegistrationStatus(campaignId, currentUserId);
+      const res = await registrationApi.checkRegistrationStatus(campaignId, currentUserId!);
       
       const statusData = res.data || ''; // e.g., "SUCCESS:uuid" or "PENDING"
       
@@ -50,6 +62,9 @@ export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' 
         const regId = parts.length > 1 ? parts[1].trim() : '';
         if (regId) {
           setRegistrationId(regId);
+          void queryClient.invalidateQueries({
+            queryKey: ['registrations', campaignId, currentUserId],
+          });
         }
 
         // Nếu là vé PAID, cần lấy thêm paymentUrl từ Payment Service trước khi chốt polling
@@ -64,7 +79,7 @@ export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' 
               toast.success('Hệ thống đã xếp chỗ & khởi tạo link VNPay thành công!');
               return res;
             }
-          } catch (e) {
+          } catch {
             // Payment Service chưa tạo xong transaction, tiếp tục polling ở lần tiếp theo
             return res;
           }
@@ -93,7 +108,7 @@ export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' 
     // Chỉ kích hoạt Polling khi đang ở trạng thái POLLING
     enabled: regState === 'POLLING' && !!currentUserId,
     // Polling mỗi 2 giây
-    refetchInterval: (query) => {
+    refetchInterval: () => {
       // Nếu đã có data và data báo SUCCESS/FAILED thì dừng polling
       if (regState !== 'POLLING') return false;
       return 2000;
@@ -101,20 +116,63 @@ export const useFlashSaleRegistration = (campaignId: string, ticketType: 'FREE' 
     // Không retry nếu lỗi network quá nhiều lúc polling, hoặc có thể để mặc định
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (reason: string) => {
+      if (ticketType !== 'FREE') {
+        throw new Error('Vé trả phí hiện chưa hỗ trợ hủy trực tuyến.');
+      }
+      const id = registrationId || activeRegistration?.registrationId;
+      if (!id) {
+        throw new Error('Không tìm thấy đơn đăng ký cần hủy.');
+      }
+      return registrationApi.cancelRegistration(id, reason);
+    },
+    onSuccess: async () => {
+      setRegState('IDLE');
+      setRegistrationId('');
+      setPaymentUrl('');
+      setErrorMessage('');
+      await queryClient.invalidateQueries({
+        queryKey: ['registrations', campaignId, currentUserId],
+      });
+      toast.success('Đã hủy đăng ký và hoàn trả slot vé.');
+    },
+    onError: (error: any) => {
+      const message = error?.message || 'Không thể hủy đăng ký.';
+      toast.error(message);
+    },
+  });
+
   const handleRegister = () => {
     if (!employee) {
       toast.error('Vui lòng đăng nhập để đăng ký vé.');
       return;
     }
+    if (activeRegistration) {
+      toast.info('Bạn đã đăng ký sự kiện này.');
+      return;
+    }
     submitMutation.mutate();
   };
 
+  const effectiveRegistrationId = registrationId || activeRegistration?.registrationId || '';
+  const effectiveStatus = activeRegistration?.status || (
+    regState === 'SUCCESS'
+      ? ticketType === 'PAID' ? 'RESERVED' : 'CONFIRMED'
+      : undefined
+  );
+
   return {
     handleRegister,
+    cancelRegistration: (reason: string) => cancelMutation.mutateAsync(reason),
     regState,
-    registrationId,
+    registrationId: effectiveRegistrationId,
+    registrationStatus: effectiveStatus,
     paymentUrl,
     errorMessage,
+    hasActiveRegistration: !!activeRegistration || regState === 'SUCCESS',
+    isCheckingRegistration: registrationsQuery.isLoading,
+    isCancelling: cancelMutation.isPending,
     isProcessing: regState === 'SUBMITTING' || regState === 'POLLING',
   };
 };

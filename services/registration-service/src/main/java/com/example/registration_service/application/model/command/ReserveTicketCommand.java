@@ -12,9 +12,7 @@ public record ReserveTicketCommand(
     public ReserveTicketCommand {
         Objects.requireNonNull(campaignId, "campaignId không được null");
         Objects.requireNonNull(userId, "userId không được null");
-
-        providerCode = providerCode == null || providerCode.isBlank()
-            ? null
+        providerCode = providerCode == null || providerCode.isBlank() ? null
             : providerCode.trim().toUpperCase(Locale.ROOT);
     }
 }
