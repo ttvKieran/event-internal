@@ -55,6 +55,13 @@ public final class TransactionalRegistrationUseCase
     }
 
     @Override
+    public RegistrationResult rollbackPaidRegistration(CancelRegistrationCommand command) {
+        return writeTransactions.execute(
+            status -> commandDelegate.rollbackPaidRegistration(command)
+        );
+    }
+
+    @Override
     public void reserveTicketAsync(ReserveTicketCommand command) {
         writeTransactions.executeWithoutResult(
             status -> commandDelegate.reserveTicketAsync(command)

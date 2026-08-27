@@ -15,6 +15,10 @@ public interface RegistrationCommandUseCase {
         CancelRegistrationCommand command
     );
 
+    RegistrationResult rollbackPaidRegistration(
+        CancelRegistrationCommand command
+    );
+
     void reserveTicketAsync(ReserveTicketCommand command);
 
     void processAsyncReservation(ReserveTicketCommand command);

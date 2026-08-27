@@ -83,19 +83,56 @@ public final class RegistrationServiceImpl
 
     @Override
     public RegistrationResult cancelRegistration(CancelRegistrationCommand command) {
+        return cancel(command, TicketType.FREE, false);
+    }
+
+    @Override
+    public RegistrationResult rollbackPaidRegistration(CancelRegistrationCommand command) {
+        return cancel(command, TicketType.PAID, true);
+    }
+
+    private RegistrationResult cancel(CancelRegistrationCommand command,
+        TicketType expectedTicketType, boolean publishPaidRollbackEvent) {
+        Objects.requireNonNull(command, "command không được null");
+
         Registration registration = registrationRepo.findByIdForUpdate(command.registrationId())
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mã đăng ký"));
 
-        registration.cancel(command.reason());
-
         RegistrationCampaign campaign = campaignRepo.findByIdForUpdate(registration.getCampaignId())
             .orElseThrow(() -> new IllegalStateException("Không tìm thấy chiến dịch của đơn đăng ký"));
+
+        if (!campaign.getTicketType().equals(expectedTicketType)) {
+            if (expectedTicketType.equals(TicketType.FREE)) {
+                throw new IllegalStateException(
+                    "Vé trả phí không thể hủy trực tiếp. Vui lòng chờ quy trình hoàn tiền."
+                );
+            }
+            throw new IllegalStateException(
+                "Chỉ quy trình rollback thanh toán mới được hủy vé trả phí."
+            );
+        }
+
+        if (publishPaidRollbackEvent && registration.getStatus().equals(RegistrationStatus.CANCELLED)) {
+            return toResult(registration);
+        }
+
+        if (publishPaidRollbackEvent && !registration.getStatus().equals(RegistrationStatus.RESERVED)) {
+            throw new IllegalStateException(
+                "Chỉ có thể rollback vé trả phí đang chờ thanh toán."
+            );
+        }
+
+        registration.cancel(command.reason());
 
         campaign.releaseTicket();
         registrationRepo.save(registration);
         campaignRepo.save(campaign);
 
         ticketCachePort.incrementTicket(registration.getCampaignId());
+
+        if (publishPaidRollbackEvent) {
+            messagePort.publishPaidRegistrationRolledBack(registration, command.reason());
+        }
 
         return toResult(registration);
     }

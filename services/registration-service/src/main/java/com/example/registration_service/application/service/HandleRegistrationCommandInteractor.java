@@ -35,7 +35,7 @@ public final class HandleRegistrationCommandInteractor
                 registrations.confirmRegistration(confirm.registrationId());
 
             case RegistrationCommand.RollbackPaid rollback ->
-                registrations.cancelRegistration(
+                registrations.rollbackPaidRegistration(
                     new CancelRegistrationCommand(rollback.registrationId(), rollback.reason())
                 );
 

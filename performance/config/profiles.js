@@ -25,7 +25,7 @@ export const profiles = {
     ],
   },
 
-  // Spike test (Flash Sale): Giả lập lượng lớn user ùa vào đột ngột trong thời gian rất ngắn
+  // Spike test: Giả lập lượng lớn user ùa vào đột ngột trong thời gian rất ngắn
   spike: {
     stages: [
       { duration: '10s', target: 100 },  // Khởi động nhanh

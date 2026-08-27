@@ -16,7 +16,7 @@ public interface SagaCommandPort {
 
     /**
      * Phát lệnh hoàn trả slot vé sau khi Payment báo thất bại/timeout.
-     * → RegistrationCommandListener nhận và gọi cancelRegistration()
+     * → RegistrationCommandListener nhận và gọi rollbackPaidRegistration()
      */
     void sendRollbackCommand(UUID registrationId, String reason);
 }
