@@ -4,6 +4,7 @@ import com.example.registration_service.application.model.command.PaymentResultC
 import com.example.registration_service.application.port.in.HandlePaymentResult;
 import com.example.registration_service.application.port.out.ProcessedMessageStore;
 import com.example.registration_service.application.port.out.SagaCommandPort;
+import com.example.registration_service.application.port.out.SagaMetricsPort;
 
 import java.time.Clock;
 import java.util.Objects;
@@ -13,12 +14,14 @@ public final class HandlePaymentResultInteractor
 
     private final ProcessedMessageStore processedMessages;
     private final SagaCommandPort sagaCommands;
+    private final SagaMetricsPort sagaMetrics;
     private final Clock clock;
 
     public HandlePaymentResultInteractor(ProcessedMessageStore processedMessages,
-        SagaCommandPort sagaCommands, Clock clock) {
+        SagaCommandPort sagaCommands, SagaMetricsPort sagaMetrics, Clock clock) {
         this.processedMessages = Objects.requireNonNull(processedMessages);
         this.sagaCommands = Objects.requireNonNull(sagaCommands);
+        this.sagaMetrics = Objects.requireNonNull(sagaMetrics);
         this.clock = Objects.requireNonNull(clock);
     }
 
@@ -29,11 +32,15 @@ public final class HandlePaymentResultInteractor
         if (!firstDelivery) return;
 
         switch (command) {
-            case PaymentResultCommand.Succeeded succeeded ->
+            case PaymentResultCommand.Succeeded succeeded -> {
                 sagaCommands.sendConfirmCommand(succeeded.registrationId(), succeeded.paymentId());
+                sagaMetrics.recordPaymentSucceeded();
+            }
 
-            case PaymentResultCommand.Failed failed ->
+            case PaymentResultCommand.Failed failed -> {
                 sagaCommands.sendRollbackCommand(failed.registrationId(), failed.reason());
+                sagaMetrics.recordPaymentRolledBack(failed.reason());
+            }
         }
     }
 }

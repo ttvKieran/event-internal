@@ -15,161 +15,289 @@ services:
   #      - app-network
   #
     # ─── API Gateway ─────────────────────────────────
-  gateway:
-    build: ./gateway
-    container_name: gateway
-    ports:
-      - "${GATEWAY_PORT:-8000}:8000"
-    depends_on:
-      iam-service:
-        condition: service_started
-    environment:
-      - IAM_SERVICE_URL=http://iam-service:${IAM_SERVICE_PORT:-8085}
-      - ATTENDANCE_SERVICE_URL=http://attendance-service:${ATTENDANCE_SERVICE_PORT:-8086}
-      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - app-network
-
-  # ─── IAM Service ─────────────────────────────────
-  iam-service:
-    build: ./services/iam-service
-    container_name: iam-service
-    ports:
-      - "${IAM_SERVICE_PORT:-8085}:8085"
-    depends_on:
-      iam-db:
-        condition: service_started
-      kafka:
-        condition: service_started
-    environment:
-      - DB_HOST=iam-db
-      - IAM_DB_PORT=5432
-      - IAM_DB_NAME=${IAM_DB_NAME:-employee_db}
-      - DB_USER=${IAM_DB_USER:-postgres}
-      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
-      - KAFKA_URL=kafka:29092
-      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
-    networks:
-      - app-network
-
-  # ─── Database for IAM ────────────────────────────
-  iam-db:
-    image: quay.io/debezium/postgres:16
-    container_name: iam-db
-    ports:
-      - "${IAM_DB_PORT:-5435}:5432"
-    environment:
-      POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
-      POSTGRES_USER: ${IAM_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${IAM_DB_PASSWORD:-postgres}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - iam-db-data:/var/lib/postgresql/data
-    networks:
-      - app-network
-
-  # ─── Attendance Service ─────────────────────────────────
-  attendance-service:
-    build: ./services/attendance-service
-    container_name: attendance-service
-    ports:
-      - "${ATTENDANCE_SERVICE_PORT:-8086}:8086"
-    depends_on:
-      attendance-db:
-        condition: service_started
-      kafka:
-        condition: service_started
-    environment:
-      - DB_HOST=attendance-db
-      - ATTENDANCE_DB_PORT=5432
-      - ATTENDANCE_DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
-      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
-      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
-      - KAFKA_URL=kafka:29092
-      - SPRING_SQL_INIT_MODE=always
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8086/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - app-network
-
-  # ─── Database for Attendance ────────────────────────────
-  attendance-db:
-    image: quay.io/debezium/postgres:16
-    container_name: attendance-db
-    ports:
-      - "${ATTENDANCE_DB_PORT:-5436}:5432"
-    environment:
-      POSTGRES_DB: ${ATTENDANCE_DB_NAME:-attendance_db}
-      POSTGRES_USER: ${ATTENDANCE_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${ATTENDANCE_DB_PASSWORD:-postgres}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - attendance-db-data:/var/lib/postgresql/data
-    networks:
-      - app-network
-
-  # ─── Resource Service ─────────────────────────────────
-  resource-service:
-    build: ./services/resource-service
-    container_name: resource-service
-    ports:
-      - "${RESOURCE_SERVICE_PORT:-8081}:8081"
-    depends_on:
-      resource-db:
-        condition: service_started
-      kafka:
-        condition: service_started
-    environment:
-      - DB_HOST=resource-db
-      - RESOURCE_DB_PORT=5432
-      - RESOURCE_DB_NAME=${RESOURCE_DB_NAME:-resource_db}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - KAFKA_URL=kafka:29092
-      - SPRING_SQL_INIT_MODE=always
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - app-network
-
-  # ─── Database for Resource ────────────────────────────
-  resource-db:
-    image: quay.io/debezium/postgres:16
-    container_name: resource-db
-    ports:
-      - "${RESOURCE_DB_PORT:-5431}:5432"
-    environment:
-      POSTGRES_DB: ${RESOURCE_DB_NAME:-resource_db}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - resource_db_data:/var/lib/postgresql/data
-    networks:
-      - app-network
+#  gateway:
+#    build: ./gateway
+#    container_name: gateway
+#    ports:
+#      - "${GATEWAY_PORT:-8000}:8000"
+#    depends_on:
+#      iam-service:
+#        condition: service_started
+#    environment:
+#      - IAM_SERVICE_URL=http://iam-service:${IAM_SERVICE_PORT:-8085}
+#      - ATTENDANCE_SERVICE_URL=http://attendance-service:${ATTENDANCE_SERVICE_PORT:-8086}
+#      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
+#    healthcheck:
+#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/actuator/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    networks:
+#      - app-network
+#
+#  # ─── IAM Service ─────────────────────────────────
+#  iam-service:
+#    build: ./services/iam-service
+#    container_name: iam-service
+#    ports:
+#      - "${IAM_SERVICE_PORT:-8085}:8085"
+#    depends_on:
+#      iam-db:
+#        condition: service_started
+#      kafka:
+#        condition: service_started
+#    environment:
+#      - DB_HOST=iam-db
+#      - IAM_DB_PORT=5432
+#      - IAM_DB_NAME=${IAM_DB_NAME:-employee_db}
+#      - DB_USER=${IAM_DB_USER:-postgres}
+#      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
+#      - KAFKA_URL=kafka:29092
+#      - JWT_SECRET=${JWT_SECRET:-my_super_secret_jwt_key_12345}
+#    networks:
+#      - app-network
+#
+#  # ─── Database for IAM ────────────────────────────
+#  iam-db:
+#    image: quay.io/debezium/postgres:16
+#    container_name: iam-db
+#    ports:
+#      - "${IAM_DB_PORT:-5435}:5432"
+#    environment:
+#      POSTGRES_DB: ${IAM_DB_NAME:-employee_db}
+#      POSTGRES_USER: ${IAM_DB_USER:-postgres}
+#      POSTGRES_PASSWORD: ${IAM_DB_PASSWORD:-postgres}
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U postgres"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    volumes:
+#      - iam-db-data:/var/lib/postgresql/data
+#    networks:
+#      - app-network
+#
+#  # ─── Attendance Service ─────────────────────────────────
+#  attendance-service:
+#    build: ./services/attendance-service
+#    container_name: attendance-service
+#    ports:
+#      - "${ATTENDANCE_SERVICE_PORT:-8086}:8086"
+#    depends_on:
+#      attendance-db:
+#        condition: service_started
+#      kafka:
+#        condition: service_started
+#    environment:
+#      - DB_HOST=attendance-db
+#      - ATTENDANCE_DB_PORT=5432
+#      - ATTENDANCE_DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
+#      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
+#      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
+#      - KAFKA_URL=kafka:29092
+#      - SPRING_SQL_INIT_MODE=always
+#    healthcheck:
+#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8086/actuator/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    networks:
+#      - app-network
+#
+#  # ─── Database for Attendance ────────────────────────────
+#  attendance-db:
+#    image: quay.io/debezium/postgres:16
+#    container_name: attendance-db
+#    ports:
+#      - "${ATTENDANCE_DB_PORT:-5436}:5432"
+#    environment:
+#      POSTGRES_DB: ${ATTENDANCE_DB_NAME:-attendance_db}
+#      POSTGRES_USER: ${ATTENDANCE_DB_USER:-postgres}
+#      POSTGRES_PASSWORD: ${ATTENDANCE_DB_PASSWORD:-postgres}
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U postgres"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    volumes:
+#      - attendance-db-data:/var/lib/postgresql/data
+#    networks:
+#      - app-network
+#
+#  # ─── Resource Service ─────────────────────────────────
+#  resource-service:
+#    build: ./services/resource-service
+#    container_name: resource-service
+#    ports:
+#      - "${RESOURCE_SERVICE_PORT:-8081}:8081"
+#    depends_on:
+#      resource-db:
+#        condition: service_started
+#      kafka:
+#        condition: service_started
+#    environment:
+#      - DB_HOST=resource-db
+#      - RESOURCE_DB_PORT=5432
+#      - RESOURCE_DB_NAME=${RESOURCE_DB_NAME:-resource_db}
+#      - DB_USER=${DB_USER:-postgres}
+#      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+#      - KAFKA_URL=kafka:29092
+#      - SPRING_SQL_INIT_MODE=always
+#    healthcheck:
+#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    networks:
+#      - app-network
+#
+#  # ─── Database for Resource ────────────────────────────
+#  resource-db:
+#    image: quay.io/debezium/postgres:16
+#    container_name: resource-db
+#    ports:
+#      - "${RESOURCE_DB_PORT:-5431}:5432"
+#    environment:
+#      POSTGRES_DB: ${RESOURCE_DB_NAME:-resource_db}
+#      POSTGRES_USER: ${DB_USER:-postgres}
+#      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U postgres"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    volumes:
+#      - resource_db_data:/var/lib/postgresql/data
+#    networks:
+#      - app-network
+#
+#  # ─── Analytics Service ─────────────────────────
+#  analytics-service:
+#    build: ./services/analytics-service
+#    container_name: analytics-service
+#    ports:
+#      - "${ANALYTICS_SERVICE_PORT:-8088}:8088"
+#    depends_on:
+#      analytics-db:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
+#    environment:
+#      - DB_HOST=analytics-db
+#      - DB_PORT=5432
+#      - DB_NAME=${ANALYTICS_DB_NAME:-analytics_db}
+#      - DB_USER=${ANALYTICS_DB_USER:-postgres}
+#      - DB_PASSWORD=${ANALYTICS_DB_PASSWORD:-postgres}
+#      - KAFKA_URL=kafka:29092
+#    networks:
+#      - app-network
+#
+#  analytics-db:
+#    image: quay.io/debezium/postgres:16
+#    ports:
+#      - "${ANALYTICS_DB_PORT:-5438}:5432"
+#    environment:
+#      POSTGRES_DB: ${ANALYTICS_DB_NAME:-analytics_db}
+#      POSTGRES_USER: ${ANALYTICS_DB_USER:-postgres}
+#      POSTGRES_PASSWORD: ${ANALYTICS_DB_PASSWORD:-postgres}
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    volumes:
+#      - analytics_db_data:/var/lib/postgresql/data
+#    networks:
+#      - app-network
+#
+#  debezium-init-iam:
+#    image: curlimages/curl:latest
+#    environment:
+#      - DB_USER=${IAM_DB_USER:-postgres}
+#      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
+#      - DB_NAME=${IAM_DB_NAME:-employee_db}
+#      - DB_HOST=iam-db
+#      - DB_PORT=5432
+#      - DEBEZIUM_HOST=debezium
+#      - DEBEZIUM_PORT=8083
+#      - CONNECTOR_NAME=iam-outbox-connector
+#      - TOPIC_PREFIX=vtit
+#      - TABLE_INCLUDE_LIST=public.outbox_events
+#      - ROUTE_TOPIC_REPLACEMENT=Iam
+#    volumes:
+#      - ./scripts:/scripts:ro
+#    command: [ "sh", "/scripts/debezium/register-iam-connector.sh" ]
+#    depends_on:
+#      - debezium
+#      - iam-db
+#
+#  debezium-init-attendance:
+#    image: curlimages/curl:latest
+#    environment:
+#      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
+#      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
+#      - DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
+#      - DB_HOST=attendance-db
+#      - DB_PORT=5432
+#      - DEBEZIUM_HOST=debezium
+#      - DEBEZIUM_PORT=8083
+#      - CONNECTOR_NAME=attendance-outbox-connector
+#      - TOPIC_PREFIX=vtit
+#      - TABLE_INCLUDE_LIST=public.outbox_events
+#      - ROUTE_TOPIC_REPLACEMENT=Attendance
+#    volumes:
+#      - ./scripts:/scripts:ro
+#    command: [ "sh", "/scripts/debezium/register-attendance-connector.sh" ]
+#    depends_on:
+#      - debezium
+#      - attendance-db
+#
+#  debezium-init-resource:
+#    image: curlimages/curl:latest
+#    environment:
+#      - DB_USER=${DB_USER:-postgres}
+#      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+#      - DB_NAME=${RESOURCE_DB_NAME:-resource_db}
+#      - DB_HOST=resource-db
+#      - DB_PORT=5432
+#      - DEBEZIUM_HOST=debezium
+#      - DEBEZIUM_PORT=8083
+#      - CONNECTOR_NAME=resource-outbox-connector
+#      - TOPIC_PREFIX=vtit
+#      - TABLE_INCLUDE_LIST=public.outbox_events
+#      - ROUTE_TOPIC_REPLACEMENT=Resource
+#    volumes:
+#      - ./scripts:/scripts:ro
+#    command: [ "sh", "/scripts/debezium/register-resource-connector.sh" ]
+#    depends_on:
+#      - debezium
+#      - resource-db
+#    restart: "no"
+#    networks:
+#      - app-network
+#  debezium-init-analytics:
+#    image: curlimages/curl:latest
+#    environment:
+#      - DB_USER=${ANALYTICS_DB_USER:-postgres}
+#      - DB_PASSWORD=${ANALYTICS_DB_PASSWORD:-postgres}
+#      - DB_NAME=${ANALYTICS_DB_NAME:-analytics_db}
+#      - DB_HOST=analytics-db
+#      - DB_PORT=5432
+#      - DEBEZIUM_HOST=debezium
+#      - DEBEZIUM_PORT=8083
+#      - CONNECTOR_NAME=analytics-outbox-connector
+#      - TOPIC_PREFIX=vtit
+#      - TABLE_INCLUDE_LIST=public.outbox_events
+#      - ROUTE_TOPIC_REPLACEMENT=Metrics
+#    volumes:
+#      - ./scripts:/scripts:ro
+#    command: [ "sh", "/scripts/debezium/register-analytics-connector.sh" ]
+#    depends_on:
+#      - debezium
+#      - analytics-db
+#    restart: "no"
+#    networks:
+#      - app-network
 
   # ─── Event Service ────────────────────────────────
   event-service:
@@ -190,6 +318,16 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
       - KAFKA_URL=kafka:29092
       - REGISTRATION_SERVICE_URL=http://registration-service:8083
+      - JAVA_TOOL_OPTIONS=-javaagent:/otel/opentelemetry-javaagent.jar
+      - OTEL_SERVICE_NAME=event-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_TRACES_SAMPLER=parentbased_always_on
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=local,service.version=0.0.1
     networks:
       - app-network
 
@@ -215,6 +353,16 @@ services:
       - KAFKA_URL=kafka:29092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JAVA_TOOL_OPTIONS=-javaagent:/otel/opentelemetry-javaagent.jar
+      - OTEL_SERVICE_NAME=registration-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_TRACES_SAMPLER=parentbased_always_on
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=local,service.version=0.0.1
     networks:
       - app-network
 
@@ -244,6 +392,16 @@ services:
       - VNPAY_PAY_URL=${VNPAY_PAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
       - VNPAY_TMN_CODE=${VNPAY_TMN_CODE:-2QX64648}
       - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET:-RA4H94ZJ9K814W63255XY4S684352WVS}
+      - JAVA_TOOL_OPTIONS=-javaagent:/otel/opentelemetry-javaagent.jar
+      - OTEL_SERVICE_NAME=payment-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_TRACES_SAMPLER=parentbased_always_on
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=local,service.version=0.0.1
     networks:
       - app-network
 
@@ -269,26 +427,16 @@ services:
       - KAFKA_URL=kafka:29092
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
-    networks:
-      - app-network
-  # ─── Analytics Service ─────────────────────────
-  analytics-service:
-    build: ./services/analytics-service
-    container_name: analytics-service
-    ports:
-      - "${ANALYTICS_SERVICE_PORT:-8088}:8088"
-    depends_on:
-      analytics-db:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    environment:
-      - DB_HOST=analytics-db
-      - DB_PORT=5432
-      - DB_NAME=${ANALYTICS_DB_NAME:-analytics_db}
-      - DB_USER=${ANALYTICS_DB_USER:-postgres}
-      - DB_PASSWORD=${ANALYTICS_DB_PASSWORD:-postgres}
-      - KAFKA_URL=kafka:29092
+      - JAVA_TOOL_OPTIONS=-javaagent:/otel/opentelemetry-javaagent.jar
+      - OTEL_SERVICE_NAME=notification-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_TRACES_SAMPLER=parentbased_always_on
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=local,service.version=0.0.1
     networks:
       - app-network
 
@@ -364,23 +512,6 @@ services:
       - notification_db_data:/var/lib/postgresql/data
     networks:
       - app-network
-  analytics-db:
-    image: quay.io/debezium/postgres:16
-    ports:
-      - "${ANALYTICS_DB_PORT:-5438}:5432"
-    environment:
-      POSTGRES_DB: ${ANALYTICS_DB_NAME:-analytics_db}
-      POSTGRES_USER: ${ANALYTICS_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${ANALYTICS_DB_PASSWORD:-postgres}
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - analytics_db_data:/var/lib/postgresql/data
-    networks:
-      - app-network
 
   redis:
     image: redis:7-alpine
@@ -422,7 +553,7 @@ services:
     depends_on:
       zookeeper:
         condition: service_healthy
-    restart: "on-failure:5"
+    restart: "on-failure"
     stop_grace_period: 30s
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
@@ -484,27 +615,6 @@ services:
     networks:
       - app-network
 
-  debezium-init-iam:
-    image: curlimages/curl:latest
-    environment:
-      - DB_USER=${IAM_DB_USER:-postgres}
-      - DB_PASSWORD=${IAM_DB_PASSWORD:-postgres}
-      - DB_NAME=${IAM_DB_NAME:-employee_db}
-      - DB_HOST=iam-db
-      - DB_PORT=5432
-      - DEBEZIUM_HOST=debezium
-      - DEBEZIUM_PORT=8083
-      - CONNECTOR_NAME=iam-outbox-connector
-      - TOPIC_PREFIX=vtit
-      - TABLE_INCLUDE_LIST=public.outbox_events
-      - ROUTE_TOPIC_REPLACEMENT=Iam
-    volumes:
-      - ./scripts:/scripts:ro
-    command: [ "sh", "/scripts/debezium/register-iam-connector.sh" ]
-    depends_on:
-      - debezium
-      - iam-db
-
   registration-debezium-init:
     image: curlimages/curl:latest
     environment:
@@ -528,27 +638,6 @@ services:
     restart: "no"
     networks:
       - app-network
-
-  debezium-init-attendance:
-    image: curlimages/curl:latest
-    environment:
-      - DB_USER=${ATTENDANCE_DB_USER:-postgres}
-      - DB_PASSWORD=${ATTENDANCE_DB_PASSWORD:-postgres}
-      - DB_NAME=${ATTENDANCE_DB_NAME:-attendance_db}
-      - DB_HOST=attendance-db
-      - DB_PORT=5432
-      - DEBEZIUM_HOST=debezium
-      - DEBEZIUM_PORT=8083
-      - CONNECTOR_NAME=attendance-outbox-connector
-      - TOPIC_PREFIX=vtit
-      - TABLE_INCLUDE_LIST=public.outbox_events
-      - ROUTE_TOPIC_REPLACEMENT=Attendance
-    volumes:
-      - ./scripts:/scripts:ro
-    command: [ "sh", "/scripts/debezium/register-attendance-connector.sh" ]
-    depends_on:
-      - debezium
-      - attendance-db
 
   payment-debezium-init:
     image: curlimages/curl:latest
@@ -574,50 +663,85 @@ services:
     networks:
       - app-network
 
-  debezium-init-resource:
-    image: curlimages/curl:latest
-    environment:
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - DB_NAME=${RESOURCE_DB_NAME:-resource_db}
-      - DB_HOST=resource-db
-      - DB_PORT=5432
-      - DEBEZIUM_HOST=debezium
-      - DEBEZIUM_PORT=8083
-      - CONNECTOR_NAME=resource-outbox-connector
-      - TOPIC_PREFIX=vtit
-      - TABLE_INCLUDE_LIST=public.outbox_events
-      - ROUTE_TOPIC_REPLACEMENT=Resource
+  tempo:
+    image: grafana/tempo:2.10.7
+    command: [ "-config.file=/etc/tempo/tempo.yaml" ]
     volumes:
-      - ./scripts:/scripts:ro
-    command: [ "sh", "/scripts/debezium/register-resource-connector.sh" ]
-    depends_on:
-      - debezium
-      - resource-db
-    restart: "no"
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
     networks:
       - app-network
-  debezium-init-analytics:
-    image: curlimages/curl:latest
-    environment:
-      - DB_USER=${ANALYTICS_DB_USER:-postgres}
-      - DB_PASSWORD=${ANALYTICS_DB_PASSWORD:-postgres}
-      - DB_NAME=${ANALYTICS_DB_NAME:-analytics_db}
-      - DB_HOST=analytics-db
-      - DB_PORT=5432
-      - DEBEZIUM_HOST=debezium
-      - DEBEZIUM_PORT=8083
-      - CONNECTOR_NAME=analytics-outbox-connector
-      - TOPIC_PREFIX=vtit
-      - TABLE_INCLUDE_LIST=public.outbox_events
-      - ROUTE_TOPIC_REPLACEMENT=Metrics
+
+  loki:
+    image: grafana/loki:3.7.2
+    command: [ "-config.file=/etc/loki/loki.yaml" ]
     volumes:
-      - ./scripts:/scripts:ro
-    command: [ "sh", "/scripts/debezium/register-analytics-connector.sh" ]
+      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.157.0
+    command: [ "--config=/etc/otelcol-contrib/config.yaml" ]
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
     depends_on:
-      - debezium
-      - analytics-db
-    restart: "no"
+      - tempo
+      - loki
+    networks:
+      - app-network
+
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - app-network
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.9.0
+    command:
+      - "--kafka.server=kafka:29092"
+    ports:
+      - "9308:9308"
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -627,10 +751,14 @@ networks:
 
 volumes:
   event-db-data:
-  iam-db-data:
-  attendance-db-data:
-  resource_db_data:
   registration_db_data:
   payment_db_data:
   notification_db_data:
-  analytics_db_data:
+  tempo-data:
+  loki-data:
+  prometheus-data:
+  grafana-data:
+#  analytics_db_data:
+#  iam-db-data:
+#  attendance-db-data:
+#  resource_db_data:

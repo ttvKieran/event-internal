@@ -59,3 +59,18 @@ vnpay:
   hash-secret: ${VNPAY_HASH_SECRET:YOUR_HASH_SECRET_HERE}
   return-url: ${VNPAY_RETURN_URL:http://localhost:8084/api/v1/payments/vnpay-return}
   ipn-url: ${VNPAY_IPN_URL:http://localhost:8084/api/v1/payments/vnpay-ipn}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

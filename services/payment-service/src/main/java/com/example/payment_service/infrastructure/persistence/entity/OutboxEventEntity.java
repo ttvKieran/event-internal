@@ -1,5 +1,6 @@
 package com.example.payment_service.infrastructure.persistence.entity;
 
+import com.example.payment_service.infrastructure.observability.CurrentTraceContext;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,14 +38,18 @@ public class OutboxEventEntity {
     @Column(name = "correlation_id")
     private String correlationId;
 
+    @Column(name = "trace_parent", length = 55)
+    private String traceParent;
+
     public static OutboxEventEntity of(String aggregateType, String aggregateId,
                                        String eventType, String payload) {
-        OutboxEventEntity e = new OutboxEventEntity();
-        e.aggregateType = aggregateType;
-        e.aggregateId   = aggregateId;
-        e.type     = eventType;
-        e.payload       = payload;
-        e.correlationId = java.util.UUID.randomUUID().toString(); // Tạo tạm
-        return e;
+        OutboxEventEntity event = new OutboxEventEntity();
+        event.aggregateType = aggregateType;
+        event.aggregateId = aggregateId;
+        event.type = eventType;
+        event.payload = payload;
+        event.correlationId = UUID.randomUUID().toString();
+        event.traceParent = CurrentTraceContext.traceParent();
+        return event;
     }
 }

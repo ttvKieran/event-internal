@@ -1,13 +1,7 @@
 package com.example.registration_service.infrastructure.config;
 
 import com.example.registration_service.application.port.in.*;
-import com.example.registration_service.application.port.out.ProcessedMessageStore;
-import com.example.registration_service.application.port.out.RegistrationCampaignRepository;
-import com.example.registration_service.application.port.out.RegistrationIdGenerator;
-import com.example.registration_service.application.port.out.RegistrationMessagePort;
-import com.example.registration_service.application.port.out.RegistrationRepository;
-import com.example.registration_service.application.port.out.SagaCommandPort;
-import com.example.registration_service.application.port.out.TicketCachePort;
+import com.example.registration_service.application.port.out.*;
 import com.example.registration_service.application.service.*;
 import com.example.registration_service.infrastructure.transaction.*;
 import org.springframework.context.annotation.Bean;
@@ -37,12 +31,12 @@ public class UseCaseConfiguration {
     }
 
     @Bean
-    HandlePaymentResult handlePaymentResult(
-        ProcessedMessageStore processedMessages, SagaCommandPort sagaCommands,
+    HandlePaymentResult handlePaymentResult(ProcessedMessageStore processedMessages,
+        SagaCommandPort sagaCommands, SagaMetricsPort sagaMetrics,
         Clock clock, TransactionTemplate applicationTransactionTemplate) {
 
         HandlePaymentResult interactor =
-            new HandlePaymentResultInteractor(processedMessages, sagaCommands, clock);
+            new HandlePaymentResultInteractor(processedMessages, sagaCommands, sagaMetrics, clock);
 
         return new TransactionalHandlePaymentResult(interactor, applicationTransactionTemplate);
     }

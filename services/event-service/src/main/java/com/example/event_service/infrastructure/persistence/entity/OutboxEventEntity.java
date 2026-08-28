@@ -41,4 +41,7 @@ public class OutboxEventEntity {
 
     @Column(nullable = false)
     private Instant createdAt;
+
+    @Column(name = "trace_parent", length = 55)
+    private String traceParent;
 }

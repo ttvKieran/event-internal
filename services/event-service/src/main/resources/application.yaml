@@ -76,4 +76,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,circuitbreakers
+        include: health,info,metrics,prometheus,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

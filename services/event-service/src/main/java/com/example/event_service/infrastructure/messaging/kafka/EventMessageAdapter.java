@@ -5,6 +5,7 @@ import com.example.event_service.application.dto.message.EventCreatedEventPayloa
 import com.example.event_service.application.dto.message.EventDetailsConfiguredEventPayload;
 import com.example.event_service.application.dto.message.EventPublishedEventPayload;
 import com.example.event_service.application.port.out.EventMessagePort;
+import com.example.event_service.infrastructure.observability.CurrentTraceContext;
 import com.example.event_service.infrastructure.persistence.entity.OutboxEventEntity;
 import com.example.event_service.infrastructure.persistence.repository.JpaOutboxEventRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,7 +28,7 @@ public class EventMessageAdapter implements EventMessagePort {
             String jsonPayload = objectMapper.writeValueAsString(payload);
             OutboxEventEntity outboxEvent = new OutboxEventEntity(
                 UUID.randomUUID(), "Event", aggregateId.toString(),
-                type, correlationId, jsonPayload, Instant.now()
+                type, correlationId, jsonPayload, Instant.now(), CurrentTraceContext.traceParent()
             );
             outboxRepository.save(outboxEvent);
         } catch (JsonProcessingException e) {
