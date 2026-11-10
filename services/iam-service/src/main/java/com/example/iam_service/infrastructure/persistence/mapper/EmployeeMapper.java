@@ -3,8 +3,12 @@ package com.example.iam_service.infrastructure.persistence.mapper;
 import com.example.iam_service.domain.model.Department;
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.domain.model.Role;
+import com.example.iam_service.infrastructure.persistence.entity.DepartmentJpaEntity;
 import com.example.iam_service.infrastructure.persistence.entity.EmployeeJpaEntity;
+import com.example.iam_service.infrastructure.persistence.entity.RoleJpaEntity;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 @Component
 public class EmployeeMapper {
@@ -45,7 +49,7 @@ public class EmployeeMapper {
 
         EmployeeJpaEntity entity = new EmployeeJpaEntity();
         if (domain.getId() != null && !domain.getId().isEmpty()) {
-            entity.setId(java.util.UUID.fromString(domain.getId()));
+            entity.setId(UUID.fromString(domain.getId()));
         }
         entity.setFullname(domain.getFullname());
         entity.setEmail(domain.getEmail());
@@ -55,14 +59,14 @@ public class EmployeeMapper {
         entity.setRefreshToken(domain.getRefreshToken());
 
         if (domain.getRole() != null && domain.getRole().getId() != null) {
-            com.example.iam_service.infrastructure.persistence.entity.RoleJpaEntity roleEntity = new com.example.iam_service.infrastructure.persistence.entity.RoleJpaEntity();
-            roleEntity.setId(java.util.UUID.fromString(domain.getRole().getId()));
+            RoleJpaEntity roleEntity = new RoleJpaEntity();
+            roleEntity.setId(UUID.fromString(domain.getRole().getId()));
             entity.setRole(roleEntity);
         }
 
         if (domain.getDepartment() != null && domain.getDepartment().getId() != null) {
-            com.example.iam_service.infrastructure.persistence.entity.DepartmentJpaEntity deptEntity = new com.example.iam_service.infrastructure.persistence.entity.DepartmentJpaEntity();
-            deptEntity.setId(java.util.UUID.fromString(domain.getDepartment().getId()));
+            DepartmentJpaEntity deptEntity = new DepartmentJpaEntity();
+            deptEntity.setId(UUID.fromString(domain.getDepartment().getId()));
             entity.setDepartment(deptEntity);
         }
 

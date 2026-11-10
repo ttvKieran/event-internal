@@ -2,6 +2,7 @@ package com.example.iam_service.infrastructure.persistence.adapter;
 
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.domain.repository.IEmployeeRepository;
+import com.example.iam_service.infrastructure.persistence.entity.EmployeeJpaEntity;
 import com.example.iam_service.infrastructure.persistence.mapper.EmployeeMapper;
 import com.example.iam_service.infrastructure.persistence.repository.EmployeeSpringDataRepository;
 import org.springframework.stereotype.Repository;
@@ -41,8 +42,8 @@ public class EmployeeRepositoryImpl implements IEmployeeRepository {
 
     @Override
     public Employee save(Employee employee) {
-        com.example.iam_service.infrastructure.persistence.entity.EmployeeJpaEntity entity = mapper.toEntity(employee);
-        com.example.iam_service.infrastructure.persistence.entity.EmployeeJpaEntity saved = jpaRepository.save(entity);
+        EmployeeJpaEntity entity = mapper.toEntity(employee);
+        EmployeeJpaEntity saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }
 }

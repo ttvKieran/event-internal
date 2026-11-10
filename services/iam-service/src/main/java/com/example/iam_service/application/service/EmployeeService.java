@@ -1,6 +1,6 @@
 package com.example.iam_service.application.service;
 
-import com.example.iam_service.application.in.EmployeeUseCase;
+import com.example.iam_service.application.port.in.EmployeeUseCase;
 import com.example.iam_service.application.dto.message.EmployeeEventPayload;
 import com.example.iam_service.application.port.out.IamMessagePort;
 import com.example.iam_service.domain.model.Department;
@@ -22,8 +22,8 @@ public class EmployeeService implements EmployeeUseCase {
     private final IamMessagePort iamMessagePort;
     private final PasswordEncoder passwordEncoder;
 
-    public EmployeeService(IEmployeeRepository employeeRepository, 
-                           IamMessagePort iamMessagePort, 
+    public EmployeeService(IEmployeeRepository employeeRepository,
+                           IamMessagePort iamMessagePort,
                            PasswordEncoder passwordEncoder) {
         this.employeeRepository = employeeRepository;
         this.iamMessagePort = iamMessagePort;
@@ -57,9 +57,9 @@ public class EmployeeService implements EmployeeUseCase {
                 .build();
 
         Employee savedEmployee = employeeRepository.save(employee);
-        
+
         iamMessagePort.publishEmployeeEvent("EmployeeCreated", toPayload(savedEmployee));
-        
+
         return savedEmployee;
     }
 

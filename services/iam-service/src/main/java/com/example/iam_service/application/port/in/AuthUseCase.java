@@ -1,6 +1,6 @@
-package com.example.iam_service.application.in;
+package com.example.iam_service.application.port.in;
 
-import com.example.iam_service.application.dto.TokenPairDto;
+import com.example.iam_service.application.dto.response.TokenPairDto;
 import com.example.iam_service.domain.model.Employee;
 
 public interface AuthUseCase {

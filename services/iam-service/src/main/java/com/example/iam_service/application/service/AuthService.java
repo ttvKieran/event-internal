@@ -1,14 +1,12 @@
 package com.example.iam_service.application.service;
 
-import com.example.iam_service.application.dto.TokenPairDto;
-import com.example.iam_service.application.in.AuthUseCase;
+import com.example.iam_service.application.dto.response.TokenPairDto;
+import com.example.iam_service.application.port.in.AuthUseCase;
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.domain.repository.IEmployeeRepository;
 import com.example.iam_service.infrastructure.security.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class AuthService implements AuthUseCase {
@@ -59,7 +57,7 @@ public class AuthService implements AuthUseCase {
         String accessToken = jwtTokenProvider.generateAccessToken(employee);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(employee);
 
-        employee.setRefreshToken(refreshToken);
+        employee.setRefreshToken(newRefreshToken);
         employeeRepository.save(employee);
 
         return TokenPairDto.builder()

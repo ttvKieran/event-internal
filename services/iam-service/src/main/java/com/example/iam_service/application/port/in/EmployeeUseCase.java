@@ -1,4 +1,4 @@
-package com.example.iam_service.application.in;
+package com.example.iam_service.application.port.in;
 
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.presentation.dto.CreateEmployeeRequest;

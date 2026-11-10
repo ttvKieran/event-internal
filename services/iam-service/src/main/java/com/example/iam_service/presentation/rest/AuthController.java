@@ -1,7 +1,7 @@
 package com.example.iam_service.presentation.rest;
 
-import com.example.iam_service.application.dto.TokenPairDto;
-import com.example.iam_service.application.in.AuthUseCase;
+import com.example.iam_service.application.dto.response.TokenPairDto;
+import com.example.iam_service.application.port.in.AuthUseCase;
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.presentation.dto.LoginRequest;
 import com.example.iam_service.presentation.dto.RefreshTokenRequest;

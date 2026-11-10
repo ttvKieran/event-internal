@@ -1,4 +1,4 @@
-package com.example.iam_service.application.dto;
+package com.example.iam_service.application.dto.response;
 
 import com.example.iam_service.domain.model.Employee;
 import lombok.Builder;

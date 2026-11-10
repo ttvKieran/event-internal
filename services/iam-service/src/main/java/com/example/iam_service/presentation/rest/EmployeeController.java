@@ -1,8 +1,9 @@
 package com.example.iam_service.presentation.rest;
 
-import com.example.iam_service.application.in.EmployeeUseCase;
+import com.example.iam_service.application.port.in.EmployeeUseCase;
 import com.example.iam_service.domain.model.Employee;
 import com.example.iam_service.presentation.dto.CreateEmployeeRequest;
+import com.example.iam_service.presentation.dto.UpdateEmployeeRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,7 @@ public class EmployeeController {
     @PreAuthorize("hasAuthority('ADMIN') or #id.equals(authentication.name)")
     public ResponseEntity<?> updateEmployee(
             @PathVariable("id") String id,
-            @RequestBody com.example.iam_service.presentation.dto.UpdateEmployeeRequest request) {
+            @RequestBody UpdateEmployeeRequest request) {
         try {
             employeeUseCase.updateEmployee(id, request);
             return ResponseEntity.ok(Map.of(
